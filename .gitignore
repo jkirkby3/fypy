@@ -1,0 +1,5 @@
+*.asv
+*_LOCAL.py
+*__pycache__
+*.pyc
+
