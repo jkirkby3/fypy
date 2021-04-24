@@ -9,18 +9,16 @@ from scipy.integrate import quad
 class LewisEuropeanPricer(StrikesPricer):
     def __init__(self,
                  model: FourierModel,
-                 limit: float = 400.,
                  N: int = 2 ** 12,
                  interp: str = 'cubic'):
         """
         Price European options using Fourier method of Lewis (2001)
         :param model: Fourier model
-        :param limit: float, integration limit of Fourier integrals
         :param N: int (power of 2), number of quadrature points in integral calculation
         :param interp: str, 'cubic' or 'linear'
         """
         self._model = model
-        self._limit = limit
+        self._limit = 200  # upper bound on number of quad subintervals
         self._N = N
         self._interp = interp
 
