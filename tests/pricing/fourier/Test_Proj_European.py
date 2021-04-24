@@ -2,7 +2,8 @@ import unittest
 
 from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy.BlackScholes import *
-from fypy.model.levy.VarianceGamma import *
+from fypy.model.levy.VarianceGamma import VarianceGamma
+from fypy.model.levy.NIG import NIG
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.pricing.analytical.black_scholes import black76_price
 
@@ -54,6 +55,13 @@ class Test_Proj_European(unittest.TestCase):
         price = pricer.price(T=T, K=S0, is_call=True)
 
         self.assertAlmostEqual(price, 10.13935062748614, 13)
+
+        # 3) NIG
+        model = NIG(alpha=15, beta=-5, delta=0.5, forwardCurve=fwd, discountCurve=disc_curve)
+        pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
+        price = pricer.price(T=T, K=S0, is_call=True)
+
+        self.assertAlmostEqual(price, 9.63000693130414, 13)
 
 
 
