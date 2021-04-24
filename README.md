@@ -43,7 +43,7 @@ fypy requires:
 
 You can check the latest sources with the command
 
-    git clone https://github.com/jkirkby3/fypy
+    git clone https://github.com/jkirkby3/fypy.git
     
     
 
