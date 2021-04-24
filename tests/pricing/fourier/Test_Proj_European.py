@@ -2,6 +2,7 @@ import unittest
 
 from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy.BlackScholes import *
+from fypy.model.levy.VarianceGamma import *
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.pricing.analytical.black_scholes import black76_price
 
@@ -29,6 +30,31 @@ class Test_Proj_European(unittest.TestCase):
                 price = pricer.price(T=T, K=K, is_call=is_call)
                 true_price = black76_price(F=fwd(T), K=K, is_call=is_call, vol=sigma, disc=disc_curve(T), T=T)
                 self.assertAlmostEqual(price, true_price, 13)
+
+    def test_price_match_levy(self):
+        S0 = 100
+        r = 0.05
+        q = 0.01
+        T = 1
+
+        disc_curve = DiscountCurve_ConstRate(rate=r)
+        div_disc = DiscountCurve_ConstRate(rate=q)
+        fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
+
+        # # 1) Black Scholes
+        model = BlackScholes(sigma=0.15, forwardCurve=fwd)
+        pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
+        price = pricer.price(T=T, K=S0, is_call=True)
+
+        self.assertAlmostEqual(price, 7.94871378854164, 13)
+
+        # 2) Variance Gamma
+        model = VarianceGamma(sigma=0.2, theta=0.1, nu=0.85, forwardCurve=fwd, discountCurve=disc_curve)
+        pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
+        price = pricer.price(T=T, K=S0, is_call=True)
+
+        self.assertAlmostEqual(price, 10.13935062748614, 13)
+
 
 
 if __name__ == '__main__':

@@ -56,7 +56,7 @@ class VarianceGamma(LevyModel):
         sig2 = self.sigma ** 2
         thet2 = self.theta * self.theta
         nu = self.nu
-        w = np.log(1 - self.theta * nu - sig2 * nu) / nu  # convexity correction
+        w = np.log(1 - self.theta * nu - 0.5 * sig2 * nu) / nu  # convexity correction
         rn_drift = self.forwardCurve.drift(0, T) + w
 
         return Cumulants(T=T,
