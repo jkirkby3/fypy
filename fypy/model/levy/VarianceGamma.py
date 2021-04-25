@@ -20,8 +20,8 @@ class VarianceGamma(LevyModel):
         :param theta: float, symmetry param (theta=0 is symmetric distribution)
         :param nu: float, tail heaviness param (small nu -> heavier tail)
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve)
-        self._params = np.asarray([sigma, theta, nu])
+        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve,
+                         params=np.asarray([sigma, theta, nu]))
 
     # ================
     # Model Parameters
@@ -81,13 +81,6 @@ class VarianceGamma(LevyModel):
     # =============================
     # Calibration Interface Implementation
     # =============================
-
-    def set_params(self, params: np.ndarray):
-        self._params = params
-        return self
-
-    def get_params(self) -> np.ndarray:
-        return self._params
 
     def num_params(self) -> int:
         return 3

@@ -21,8 +21,8 @@ class NIG(LevyModel):
                 to the left (resp.  theright), and β= 0 means the distribution is symmetric
         :param delta: float, scale parameter and plays an analogous role to the σ parameter of BSM or VG
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve)
-        self._params = np.asarray([alpha, beta, delta])
+        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve,
+                         params=np.asarray([alpha, beta, delta]))
 
     # ================
     # Model Parameters
@@ -30,17 +30,17 @@ class NIG(LevyModel):
 
     @property
     def alpha(self) -> float:
-        """  Volatility param (similar to black scholes)"""
+        """ Tail Heaviness parm """
         return self._params[0]
 
     @property
     def beta(self) -> float:
-        """ Symmetry param (theta=0 is symmetric distribution) """
+        """ Symmetry param (beta=0 is symmetric distribution) """
         return self._params[1]
 
     @property
     def delta(self) -> float:
-        """ Tail heaviness param (small nu -> heavier tail) """
+        """ Scale param (similar to volatility) """
         return self._params[2]
 
     # =============================
@@ -84,13 +84,6 @@ class NIG(LevyModel):
     # =============================
     # Calibration Interface Implementation
     # =============================
-
-    def set_params(self, params: np.ndarray):
-        self._params = params
-        return self
-
-    def get_params(self) -> np.ndarray:
-        return self._params
 
     def num_params(self) -> int:
         return 3

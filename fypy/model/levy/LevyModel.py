@@ -9,7 +9,8 @@ import numpy as np
 class LevyModel(FourierModel, ABC):
     def __init__(self,
                  forwardCurve: ForwardCurve,
-                 discountCurve: DiscountCurve):
+                 discountCurve: DiscountCurve,
+                 params: np.ndarray):
         """
         Base class for an exponential Levy model, which is a model for which the characteristic function is known, hence
         enabling pricing by Fourier methods. These models are defined uniquely by their Levy "symbol", which determines
@@ -20,6 +21,7 @@ class LevyModel(FourierModel, ABC):
         super().__init__(discountCurve=discountCurve,
                          forwardCurve=forwardCurve)
         self._forwardCurve = forwardCurve  # Overrides base forward
+        self._params = params
 
     def chf(self, T: float, xi: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
         """
@@ -38,3 +40,10 @@ class LevyModel(FourierModel, ABC):
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
         raise NotImplementedError
+
+    def set_params(self, params: np.ndarray):
+        self._params = params
+        return self
+
+    def get_params(self) -> np.ndarray:
+        return self._params

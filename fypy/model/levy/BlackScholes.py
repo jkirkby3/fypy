@@ -14,8 +14,8 @@ class BlackScholes(LevyModel):
         :param forwardCurve: EquityForward curve object, contains all term structure info
         :param sigma: float, volatility
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=forwardCurve.discountCurve)
-        self._params = np.asarray([sigma])
+        super().__init__(forwardCurve=forwardCurve, discountCurve=forwardCurve.discountCurve,
+                         params=np.asarray([sigma]))
 
     # =============================
     # Model Parameters
@@ -60,13 +60,6 @@ class BlackScholes(LevyModel):
     # =============================
     # Calibration Interface Implementation
     # =============================
-
-    def set_params(self, params: np.ndarray):
-        self._params = params
-        return self
-
-    def get_params(self) -> np.ndarray:
-        return self._params
 
     def num_params(self) -> int:
         return 1
