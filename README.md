@@ -11,7 +11,8 @@ https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
 ### Models
 
 - Black-Scholes
-- Levy: Variance Gamma, Normal Inverse Gaussian (NIG)
+- Jump Diffusions: Merton, Kou
+- Levy: Variance Gamma, Normal Inverse Gaussian (NIG), CGMY
 
 ### Pricing Methods
 - Fourier: PROJ, Lewis, Gil-Peleaz

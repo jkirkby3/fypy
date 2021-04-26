@@ -4,6 +4,9 @@ from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy.BlackScholes import *
 from fypy.model.levy.VarianceGamma import VarianceGamma
 from fypy.model.levy.NIG import NIG
+from fypy.model.levy.CGMY import CMGY
+from fypy.model.levy.MertonJD import MertonJD
+from fypy.model.levy.KouJD import KouJD
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.pricing.analytical.black_scholes import black76_price
 
@@ -42,7 +45,7 @@ class Test_Proj_European(unittest.TestCase):
         div_disc = DiscountCurve_ConstRate(rate=q)
         fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 
-        # # 1) Black Scholes
+        # 1) Black Scholes
         model = BlackScholes(sigma=0.15, forwardCurve=fwd)
         pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
         price = pricer.price(T=T, K=S0, is_call=True)
@@ -63,6 +66,25 @@ class Test_Proj_European(unittest.TestCase):
 
         self.assertAlmostEqual(price, 9.63000693130414, 13)
 
+        # 4) MJD
+        model = MertonJD(sigma=0.12, lam=0.4, muj=-0.12, sigj=0.18, forwardCurve=fwd, discountCurve=disc_curve)
+        pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
+        price = pricer.price(T=T, K=S0, is_call=True)
+
+        self.assertAlmostEqual(price, 8.675684635426279, 13)
+
+        # 5) CGMY
+        model = CMGY(forwardCurve=fwd, discountCurve=disc_curve)
+        pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
+        price = pricer.price(T=T, K=S0, is_call=True)
+        self.assertAlmostEqual(price, 5.80222163947386, 13)
+
+        # 6) Kou's Jump Diffusion
+        model = KouJD(forwardCurve=fwd, discountCurve=disc_curve)
+        pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
+        price = pricer.price(T=T, K=S0, is_call=True)
+
+        self.assertAlmostEqual(price, 11.92430307601936, 13)
 
 
 if __name__ == '__main__':
