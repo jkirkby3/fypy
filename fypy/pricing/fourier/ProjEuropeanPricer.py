@@ -37,7 +37,7 @@ class ProjEuropeanPricer(StrikesPricer):
 
     def price(self, T: float, K: float, is_call: bool):
         """
-        Price a single strike (of whatever type of instrument the strikes pricer can price)
+        Price a single strike of European option
         :param T: float, time to maturity
         :param K: float, strike of option
         :param is_call: bool, indicator of if strike is call (true) or put (false)

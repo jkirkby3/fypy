@@ -53,9 +53,15 @@ class BlackScholes(LevyModel):
         :param xi: np.ndarray or float, points in frequency domain
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
-        drift = self._forwardCurve.drift(0, 1)
         sig2 = 0.5 * self.sigma ** 2
-        return xi * (1j * (drift - sig2) - sig2 * xi)
+        return xi * (1j * self.risk_neutral_log_drift() - sig2 * xi)
+
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        return -0.5 * self.sigma ** 2
 
     # =============================
     # Calibration Interface Implementation

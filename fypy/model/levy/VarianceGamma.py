@@ -56,14 +56,22 @@ class VarianceGamma(LevyModel):
         sig2 = self.sigma ** 2
         thet2 = self.theta * self.theta
         nu = self.nu
-        w = np.log(1 - self.theta * nu - 0.5 * sig2 * nu) / nu  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, T) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return Cumulants(T=T,
                          rn_drift=rn_drift,
                          c1=T * (rn_drift + self.theta),
                          c2=T * (sig2 + nu * thet2),
                          c4=T * 3 * (sig2 * sig2 * nu + 2 * thet2 * thet2 * nu ** 3 + 4 * sig2 * thet2 * nu * nu))
+
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        sig2 = self.sigma ** 2
+        nu = self.nu
+        return np.log(1 - self.theta * nu - 0.5 * sig2 * nu) / nu  # convexity correction
 
     def symbol(self, xi: Union[float, np.ndarray]):
         """
@@ -73,8 +81,7 @@ class VarianceGamma(LevyModel):
         """
         sig2 = .5 * self.sigma ** 2
         nu = self.nu
-        w = np.log(1 - self.theta * nu - sig2 * nu) / nu  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, 1) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return 1j * xi * rn_drift - np.log(1 - 1j * self.theta * nu * xi + sig2 * nu * xi ** 2) / nu
 

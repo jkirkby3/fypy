@@ -63,8 +63,7 @@ class CMGY(LevyModel):
         :return: Cumulants object
         """
         C, G, M, Y = self.C, self.G, self.M, self.Y
-        w = -C * gamma(-Y) * ((M - 1) ** Y - M ** Y + (G + 1) ** Y - G ** Y)  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, T) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return Cumulants(T=T,
                          rn_drift=rn_drift,
@@ -80,10 +79,17 @@ class CMGY(LevyModel):
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
         C, G, M, Y = self.C, self.G, self.M, self.Y
-        w = -C * gamma(-Y) * ((M - 1) ** Y - M ** Y + (G + 1) ** Y - G ** Y)  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, 1) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return 1j * xi * rn_drift + C * gamma(-Y) * ((M - 1j * xi) ** Y - M ** Y + (G + 1j * xi) ** Y - G ** Y)
+
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        C, G, M, Y = self.C, self.G, self.M, self.Y
+        return -C * gamma(-Y) * ((M - 1) ** Y - M ** Y + (G + 1) ** Y - G ** Y)  # convexity correction
 
     # =============================
     # Calibration Interface Implementation

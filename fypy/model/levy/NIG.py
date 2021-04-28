@@ -57,8 +57,7 @@ class NIG(LevyModel):
         asq = self.alpha ** 2
         bsq = self.beta ** 2
         temp = np.sqrt(asq - bsq)
-        w = self.delta * (np.sqrt(asq - (self.beta + 1) ** 2) - temp)  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, 1) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return Cumulants(T=T,
                          rn_drift=rn_drift,
@@ -66,6 +65,16 @@ class NIG(LevyModel):
                          c2=T * (self.delta * asq * (asq - bsq) ** (-1.5)),
                          c4=T * 3 * self.delta * asq * (asq + 4 * bsq) * (asq - bsq) ** (-3.5)
                          )
+
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        asq = self.alpha ** 2
+        bsq = self.beta ** 2
+        temp = np.sqrt(asq - bsq)
+        return self.delta * (np.sqrt(asq - (self.beta + 1) ** 2) - temp)  # convexity correction
 
     def symbol(self, xi: Union[float, np.ndarray]):
         """

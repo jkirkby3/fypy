@@ -66,9 +66,7 @@ class KouJD(LevyModel):
         :return: Cumulants object
         """
         sigma, lam, p_up, eta1, eta2 = self.sigma, self.lam, self.p_up, self.eta1, self.eta2
-        w = -.5 * sigma ** 2 - lam * (
-                p_up * eta1 / (eta1 - 1) + (1 - p_up) * eta2 / (eta2 + 1) - 1)  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, T) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return Cumulants(T=T,
                          rn_drift=rn_drift,
@@ -84,14 +82,22 @@ class KouJD(LevyModel):
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
         sigma, lam, p_up, eta1, eta2 = self.sigma, self.lam, self.p_up, self.eta1, self.eta2
-        w = -.5 * sigma ** 2 - lam * (
-                p_up * eta1 / (eta1 - 1) + (1 - p_up) * eta2 / (eta2 + 1) - 1)  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, 1) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         sig2 = .5 * sigma ** 2
         temp2 = -sig2 * xi ** 2 + lam * ((1 - p_up) * eta2 / (eta2 + 1j * xi) + p_up * eta1 / (eta1 - 1j * xi) - 1)
 
         return 1j * xi * rn_drift + temp2
+
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        sigma, lam, p_up, eta1, eta2 = self.sigma, self.lam, self.p_up, self.eta1, self.eta2
+        w = -.5 * sigma ** 2 - lam * (
+                p_up * eta1 / (eta1 - 1) + (1 - p_up) * eta2 / (eta2 + 1) - 1)  # convexity correction
+        return w
 
     # =============================
     # Calibration Interface Implementation

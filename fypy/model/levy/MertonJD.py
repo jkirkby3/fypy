@@ -60,10 +60,7 @@ class MertonJD(LevyModel):
         :param T: float, time to maturity (time at which cumulants are evaluated)
         :return: Cumulants object
         """
-        sig2 = .5 * self.sigma ** 2
-        sigj2 = .5 * self.sigj ** 2
-        w = -sig2 - self.lam * (np.exp(self.muj + sigj2) - 1)  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, 1) + w
+        rn_drift = self.risk_neutral_log_drift()
 
         return Cumulants(T=T,
                          rn_drift=rn_drift,
@@ -71,6 +68,15 @@ class MertonJD(LevyModel):
                          c2=T * self.lam * (self.sigma ** 2 / self.lam + self.muj ** 2 + self.sigj ** 2),
                          c4=T * self.lam * (self.muj ** 4 + 6 * self.sigj ** 2 * self.muj ** 2 + 3 * self.sigj ** 4)
                          )
+
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        sig2 = .5 * self.sigma ** 2
+        sigj2 = .5 * self.sigj ** 2
+        return -sig2 - self.lam * (np.exp(self.muj + sigj2) - 1)  # convexity correction
 
     def symbol(self, xi: Union[float, np.ndarray]):
         """

@@ -41,6 +41,18 @@ class LevyModel(FourierModel, ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def convexity_correction(self) -> float:
+        """
+        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        risk neutrality
+        """
+        raise NotImplementedError
+
+    def risk_neutral_log_drift(self) -> float:
+        """ Compute the risk-neutral drift of log process """
+        return self.forwardCurve.drift(0, 1) + self.convexity_correction()
+
     def set_params(self, params: np.ndarray):
         self._params = params
         return self
