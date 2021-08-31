@@ -30,7 +30,7 @@ class ImpliedVolCalculator(ABC):
     def imply_vols(self,
                    strikes: np.ndarray,
                    prices: np.ndarray,
-                   is_call: Union[np.ndarray, List[int]],
+                   is_calls: Union[np.ndarray, List[int]],
                    ttm: float,
                    disc: float,
                    underlying: float) -> np.ndarray:
@@ -39,7 +39,7 @@ class ImpliedVolCalculator(ABC):
         Note: you can override this with a vectorized version if available
         :param strikes: np.ndarray, strikes per option
         :param prices: np.ndarray, prices per option (same order as strikes)
-        :param is_call: np.ndarray of bools, true for call, false for put
+        :param is_calls: np.ndarray of bools, true for call, false for put
         :param ttm: float, Time to maturity (common to all options)
         :param disc: float, Discount factor for this maturity
         :param underlying: float, the underlying (spot or forward, consistent with the calculator)
@@ -51,7 +51,7 @@ class ImpliedVolCalculator(ABC):
         for i in range(len(vols)):
             vols[i] = self.imply_vol(price=prices[i],
                                      strike=strikes[i],
-                                     is_call=is_call[i],
+                                     is_call=is_calls[i],
                                      disc=disc, underlying=underlying, ttm=ttm)
 
         return vols
