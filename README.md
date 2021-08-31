@@ -39,7 +39,7 @@ fypy requires:
 
 - Python (>= 3.7)
 - NumPy (tested with 1.20.2)
-
+- py_lets_be_rational (implied volatility)
 
 ## Source code
 
