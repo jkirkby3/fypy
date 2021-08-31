@@ -62,6 +62,7 @@ from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy.BlackScholes import *
 from fypy.model.levy.VarianceGamma import *
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
+from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
 import matplotlib.pyplot as plt
 
 # ============================
@@ -100,7 +101,8 @@ pricer = ProjEuropeanPricer(model=model, N=2 ** 10)
 
 # Price a set of strikes
 strikes = np.arange(50, 150, 1)
-prices = pricer.price_strikes(T=T, K=strikes, is_calls=np.ones(len(strikes), dtype=bool))
+is_calls = np.ones(len(strikes), dtype=bool)
+prices = pricer.price_strikes(T=T, K=strikes, is_calls=is_calls)
 
 # Plot
 plt.plot(strikes, prices, label='Variance Gamma')
@@ -108,5 +110,19 @@ plt.legend()
 plt.xlabel(r'strike, $K$')
 plt.ylabel('price')
 plt.show()
+
+# Compute Implied Volatilities
+ivc = ImpliedVolCalculator_Black76()
+disc = fwd.discountCurve(T)
+vols = ivc.imply_vols(strikes=strikes, prices=prices, is_calls=is_calls,
+                      ttm=T, disc=disc, underlying=fwd(T))
+
+# Plot Implied Vols
+plt.plot(strikes, vols, label='Variance Gamma')
+plt.legend()
+plt.xlabel(r'strike, $K$')
+plt.ylabel('implied vol')
+plt.show()
+
 
 ```
