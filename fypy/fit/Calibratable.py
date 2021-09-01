@@ -48,6 +48,6 @@ class Calibratable(ABC):
         Default set of parameters that can be used as an initial guess, in the absence of better information.
         These dont have to be what you used during optimization (e.g. by inspecting market data first),
         but providing reasonable parameters here allows a model to be fit out-of-the-box
-        :return:
+        :return: array of default parameters, by default returns None, to indicate no default parameters provided
         """
         return None
