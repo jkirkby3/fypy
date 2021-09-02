@@ -1,13 +1,14 @@
 """
-This example shows how to calibrate a Levy model, using Variance Gamma example. We do the following:
+This example shows how to calibrate a Levy model (choose your favorite below). We do the following:
     1) Create a synthetic market surface, priced using Variance Gamma with set of "true" parameters
     2) Create a calibrator and set the market prices as targets
-    3) Calibrate the Variance Gamma model, starting from some intial guess
+    3) Calibrate the chosen model, starting from some intial guess
     4) Show that the calibration "discovers" the true market parameters
 """
+import numpy as np
 from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
-from fypy.model.levy.BlackScholes import *
-from fypy.model.levy.VarianceGamma import *
+from fypy.model.levy import *
+from fypy.termstructures.EquityForward import EquityForward
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.market.MarketSurface import MarketSlice, MarketSurface
 from fypy.fit.Targets import Targets
@@ -29,9 +30,22 @@ div_disc = DiscountCurve_ConstRate(rate=q)
 fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 
 # ============================
-# Create Variance Gamma Model (to generate a synthetic market to fit to)
+# Create Levy Model (to generate a synthetic market to fit to)
 # ============================
-model = VarianceGamma(sigma=0.4, theta=0.1, nu=0.6, forwardCurve=fwd, discountCurve=fwd.discountCurve)
+model_id = 1
+if model_id == 1:
+    model = VarianceGamma(sigma=0.4, theta=0.1, nu=0.6, forwardCurve=fwd, discountCurve=disc_curve)
+elif model_id == 2:
+    model = NIG(alpha=10, beta=-3, delta=0.4, forwardCurve=fwd, discountCurve=disc_curve)
+elif model_id == 3:
+    model = CMGY(C=0.01, G=4, M=12, Y=1.3, forwardCurve=fwd, discountCurve=disc_curve)
+elif model_id == 4:
+    model = MertonJD(sigma=0.15, lam=0.3, muj=0., sigj=0.3, forwardCurve=fwd, discountCurve=disc_curve)
+elif model_id == 5:
+    model = KouJD(sigma=0.14, lam=2., p_up=0.3, eta1=20, eta2=15, forwardCurve=fwd, discountCurve=disc_curve)
+else:
+    raise NotImplementedError
+
 true_params = model.get_params()
 pricer = ProjEuropeanPricer(model=model, N=2 ** 10)
 
@@ -50,6 +64,7 @@ for ttm in ttms:
                                is_calls=is_calls, mid_prices=prices)
     # Add the slice to surface
     surface.add_slice(ttm, market_slice)
+
     # push back the target prices to fit to
     target_prices.append(prices)
 
