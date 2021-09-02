@@ -1,0 +1,36 @@
+from typing import Dict
+from fypy.market.MarketSlice import MarketSlice
+
+
+class MarketSurface(object):
+    def __init__(self, slices: Dict[float, MarketSlice] = None):
+        """
+        Container class for an option price surface, composed of individual market slices, one per tenor
+        :param slices: dict: {float, MarketSlice}, contains all slices (you can add more later)
+        """
+        self._slices = slices or {}
+
+    def add_slice(self, ttm: float, market_slice: MarketSlice):
+        """
+        Add a new market slice (overwrites if same ttm already exists in surface)
+        :param ttm: float, time to maturity of the slice (tenor)
+        :param market_slice: MarketSlice, the market slice prices object
+        :return: self
+        """
+        self._slices[ttm] = market_slice
+        return self
+
+    @property
+    def slices(self) -> Dict[float, MarketSlice]:
+        """ Access all slices """
+        return self._slices
+
+    @property
+    def ttms(self):
+        """ Get the ttms in the surface """
+        return self._slices.keys()
+
+    @property
+    def num_slices(self) -> int:
+        """ Get number of slice in surface """
+        return len(self._slices)
