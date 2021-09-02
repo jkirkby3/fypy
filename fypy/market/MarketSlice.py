@@ -80,3 +80,26 @@ class MarketSlice(object):
             if self.bid_prices is None or self.ask_prices is None:
                 raise ValueError("If you dont supply mid prices, must supply bid and ask prices")
             self.mid_prices = (self.bid_prices + self.ask_prices) / 2
+
+
+if __name__ == '__main__':
+    # Example usage
+    from fypy.pricing.analytical.black_scholes import black76_price_strikes
+    from fypy.termstructures.EquityForward import EquityForward, DiscountCurve_ConstRate
+    from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
+
+    strikes_ = np.arange(50, 150, 1)
+    is_calls_ = np.ones(len(strikes_), dtype=bool)
+    T = 1.
+
+    disc_curve = DiscountCurve_ConstRate(rate=0.02)
+    fwd = EquityForward(S0=100, discount=disc_curve)
+
+    prices_ = black76_price_strikes(F=fwd(T), K=strikes_, is_calls=is_calls_, vol=0.2, disc=disc_curve(T), T=T)
+
+    mkt_slice = MarketSlice(T=T, F=fwd(T), disc=disc_curve(T), strikes=strikes_, is_calls=is_calls_,
+                            mid_prices=prices_)
+
+    ivc = ImpliedVolCalculator_Black76(fwd_curve=fwd, disc_curve=disc_curve)
+    mkt_slice.fill_implied_vols(calculator=ivc)
+    vols = mkt_slice.mid_vols

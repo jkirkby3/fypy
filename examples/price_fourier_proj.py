@@ -40,12 +40,12 @@ plt.plot(strikes, prices, label='Black Scholes')
 # ============================
 # Create Variance Gamma Model
 # ============================
-model = VarianceGamma(sigma=0.2, theta=0.1, nu=0.8, forwardCurve=fwd, discountCurve=fwd.discountCurve)
+model = VarianceGamma(sigma=0.2, theta=-0.1, nu=0.2, forwardCurve=fwd, discountCurve=fwd.discountCurve)
 pricer = ProjEuropeanPricer(model=model, N=2 ** 10)
 
 # Price a set of strikes
-strikes = np.arange(50, 150, 1)
-is_calls=np.ones(len(strikes), dtype=bool)
+strikes = np.arange(20, 180, 1)
+is_calls = np.ones(len(strikes), dtype=bool)
 prices = pricer.price_strikes(T=T, K=strikes, is_calls=is_calls)
 
 # Plot Prices

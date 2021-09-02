@@ -1,5 +1,6 @@
 from typing import Dict
 from fypy.market.MarketSlice import MarketSlice
+from fypy.volatility.implied import ImpliedVolCalculator
 
 
 class MarketSurface(object):
@@ -34,3 +35,13 @@ class MarketSurface(object):
     def num_slices(self) -> int:
         """ Get number of slice in surface """
         return len(self._slices)
+
+    def fill_implied_vols(self, calculator: ImpliedVolCalculator):
+        """
+        Fill the implied vols given a calculator. Fills in for each of bid,mid,ask, but only those that have
+        corresponding prices
+        :param calculator: ImpliedVolCalculator, a calculator used to fill in the vols from prices
+        :return: None
+        """
+        for slice_ in self.slices.values():
+            slice_.fill_implied_vols(calculator)
