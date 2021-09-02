@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Optional
+from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator
 
 
 class MarketSlice(object):
@@ -34,6 +35,45 @@ class MarketSlice(object):
         self.mid_prices = mid_prices
         self.ask_prices = ask_prices
         self._set_prices()
+
+        # Implied Volatilies (these can be set/filled after initialization)
+        self.bid_vols: Optional[np.ndarray] = None
+        self.mid_vols: Optional[np.ndarray] = None
+        self.ask_vols: Optional[np.ndarray] = None
+
+    def set_vols(self,
+                 bid_vols: Optional[np.ndarray] = None,
+                 mid_vols: Optional[np.ndarray] = None,
+                 ask_vols: Optional[np.ndarray] = None):
+        """
+        Set the implied volatilities from their value. Alternatively, you can fill them by supplying an
+        ImpliedVolCalculator
+        :param bid_vols: np.ndarray, bid implied vols (optional)
+        :param mid_vols: np.ndarray, mid implied vols (optional)
+        :param ask_vols: np.ndarray, ask implied vols (optional)
+        :return: None
+        """
+        self.bid_vols = bid_vols
+        self.ask_vols = ask_vols
+        self.mid_vols = mid_vols
+
+    def fill_implied_vols(self, calculator: ImpliedVolCalculator):
+        """
+        Fill the implied vols given a calculator. Fills in for each of bid,mid,ask, but only those that have
+        corresponding prices
+        :param calculator: ImpliedVolCalculator, a calculator used to fill in the vols from prices
+        :return: None
+        """
+        for prices, which in zip((self.bid_prices, self.mid_prices, self.ask_prices),
+                                 ('bid', 'mid', 'ask')):
+            if prices is not None:
+                vols = calculator.imply_vols(strikes=self.strikes, prices=prices, is_calls=self.is_calls, ttm=self.T)
+                if which == 'bid':
+                    self.bid_vols = vols
+                elif which == 'mid':
+                    self.mid_vols = vols
+                else:
+                    self.ask_vols = vols
 
     def _set_prices(self):
         if self.mid_prices is None:

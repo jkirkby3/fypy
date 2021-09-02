@@ -56,9 +56,9 @@ plt.ylabel('price')
 plt.show()
 
 # Compute Implied Volatilities
-ivc = ImpliedVolCalculator_Black76()
+ivc = ImpliedVolCalculator_Black76(disc_curve=disc_curve, fwd_curve=fwd)
 disc = fwd.discountCurve(T)
-vols = ivc.imply_vols(strikes=strikes, prices=prices, is_calls=is_calls, ttm=T, disc=disc, underlying=fwd(T))
+vols = ivc.imply_vols(strikes=strikes, prices=prices, is_calls=is_calls, ttm=T)
 
 # Plot Implied Vols
 plt.plot(strikes, vols, label='Variance Gamma')
