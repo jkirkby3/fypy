@@ -2,4 +2,5 @@
 *_LOCAL.py
 *__pycache__
 *.pyc
+*.idea
 

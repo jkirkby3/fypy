@@ -17,13 +17,14 @@ https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
 ### Pricing Methods
 - Fourier: PROJ, Lewis, Gil-Peleaz
 
+### Model Calibration
+- Levy Model Calibration (VG, NIG, CGMY, MJD, Kou, etc)
 
 ## Coming Soon !
 
 - Exotic Option Pricing - Asian, Barrier, American, Parisian, Cliquet, Variance Swaps, etc.
 - Models: Stochastic Volatility, Regime Switching, Stochastic Local Vol
 - Additional pricing methods, such as Mellin Series, PDE, Monte Carlo, etc.
-- Levy Model Calibration (VG, NIG, CGMY, MJD, Kou, etc)
 - Regime Switching Calibration
 - Stochastic Volatility Calibration
 - Credit model calibration
