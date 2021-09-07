@@ -1,12 +1,15 @@
 from fypy.model.FourierModel import Cumulants, FourierModel
-from fypy.termstructures.EquityForward import EquityForward
+from fypy.termstructures.ForwardCurve import ForwardCurve
+from fypy.termstructures.DiscountCurve import DiscountCurve
+
 import numpy as np
 from typing import List, Tuple, Optional, Union
 
 
 class Heston(FourierModel):
     def __init__(self,
-                 forwardCurve: EquityForward,
+                 forwardCurve: ForwardCurve,
+                 discountCurve: DiscountCurve,
                  v_0: float = 0.04,
                  theta: float = 0.04,
                  kappa: float = 2.,
@@ -16,7 +19,7 @@ class Heston(FourierModel):
         Heston model class. This model is an instance of a Fourier model, SLV, etc.
         :param forwardCurve: EquityForward curve object, contains all term structure info
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=forwardCurve.discountCurve)
+        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve)
         self._params = np.asarray([v_0, theta, kappa, sigma_v, rho])
 
     # =============================
@@ -69,9 +72,9 @@ class Heston(FourierModel):
                 sigma_v * T * kappa * np.exp(-kappa * T) * (v_0 - theta) * (8 * kappa * rho - 4 * sigma_v)
                 + kappa * rho * sigma_v * (1 - np.exp(-kappa * T)) * (16 * theta - 8 * v_0)
                 + 2 * theta * kappa * T * (-4 * kappa * rho * sigma_v + sigma_v ** 2 + 4 * kappa ** 2)
-                + sigma_v ^ 2 * ((theta - 2 * v_0) * np.exp(-2 * kappa * T) + theta
-                                 * (6 * np.exp(-kappa * T) - 7) + 2 * v_0)
-                + 8 * kappa ^ 2 * (v_0 - theta) * (1 - np.exp(-kappa * T)))
+                + sigma_v ** 2 * ((theta - 2 * v_0) * np.exp(-2 * kappa * T) + theta
+                                  * (6 * np.exp(-kappa * T) - 7) + 2 * v_0)
+                + 8 * kappa ** 2 * (v_0 - theta) * (1 - np.exp(-kappa * T)))
 
         return Cumulants(T=T,
                          rn_drift=rn_drift,
@@ -80,6 +83,12 @@ class Heston(FourierModel):
                          c4=0)
 
     def chf(self, T: float, xi: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        """
+        Characteristic function
+        :param T: float, time to maturity
+        :param xi: np.ndarray or float, points in frequency domain
+        :return: np.ndarray or float, characteristic function evaluated at input points in frequency domain
+        """
         v_0, theta, kappa, sigma_v, rho = self.v_0, self.theta, self.kappa, self.sigma_v, self.rho
 
         alpha = -.5 * (xi * xi + xi * 1j)

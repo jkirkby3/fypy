@@ -1,13 +1,15 @@
 """
-This example shows how to calibrate a Levy model (choose your favorite below). We do the following:
+This example shows how to calibrate a Levy model or Heston's stochastic volatility model (choose your favorite below).
+We do the following:
     1) Create a synthetic market surface, priced using Variance Gamma with set of "true" parameters
     2) Create a calibrator and set the market prices as targets
-    3) Calibrate the chosen model, starting from some intial guess
+    3) Calibrate the chosen model, starting from some initial guess
     4) Show that the calibration "discovers" the true market parameters
 """
 import numpy as np
 from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy import *
+from fypy.model.sv.Heston import Heston
 from fypy.termstructures.EquityForward import EquityForward
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.market.MarketSurface import MarketSlice, MarketSurface
@@ -32,7 +34,7 @@ fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 # ============================
 # Create Levy Model (to generate a synthetic market to fit to)
 # ============================
-model_id = 1
+model_id = 7
 if model_id == 1:
     model = VarianceGamma(sigma=0.4, theta=0.1, nu=0.6, forwardCurve=fwd, discountCurve=disc_curve)
 elif model_id == 2:
@@ -43,6 +45,10 @@ elif model_id == 4:
     model = MertonJD(sigma=0.15, lam=0.3, muj=0., sigj=0.3, forwardCurve=fwd, discountCurve=disc_curve)
 elif model_id == 5:
     model = KouJD(sigma=0.14, lam=2., p_up=0.3, eta1=20, eta2=15, forwardCurve=fwd, discountCurve=disc_curve)
+elif model_id == 6:
+    model = BlackScholes(sigma=0.1, forwardCurve=fwd)
+elif model_id == 7:
+    model = Heston(v_0=0.02, theta=0.02, kappa=3., sigma_v=0.2, rho=-0.8, forwardCurve=fwd, discountCurve=disc_curve)
 else:
     raise NotImplementedError
 
