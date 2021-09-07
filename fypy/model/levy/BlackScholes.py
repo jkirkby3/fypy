@@ -15,7 +15,7 @@ class BlackScholes(LevyModel):
         :param sigma: float, volatility
         """
         super().__init__(forwardCurve=forwardCurve, discountCurve=forwardCurve.discountCurve,
-                         params=np.asarray([sigma]))
+                         params=np.asarray([sigma, ]))
 
     # =============================
     # Model Parameters

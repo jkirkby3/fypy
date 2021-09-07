@@ -44,14 +44,18 @@ class ProjEuropeanPricer(StrikesPricer):
         :return: float, price of option
         """
         S0 = self._model.spot()
+        lws = np.log(K / S0)
 
         cumulants = self._model.cumulants(T)
         alph = cumulants.get_truncation_heuristic(L=self._L) \
             if np.isnan(self._alpha_override) else self._alpha_override
 
+        # Ensure that grid is wide enough to cover the strike
+        alph = max(alph, 1.05 * abs(lws))
+
         dx = 2 * alph / (self._N - 1)
         a = 1. / dx
-        lws = np.log(K / S0)
+
         lam = cumulants.c1 - (self._N / 2 - 1) * dx
         nbar = int(np.floor(a * (lws - lam) + 1))
         if nbar >= self._N:
