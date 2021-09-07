@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
+from fypy.date.Date import Date
 from typing import Union
 
 
@@ -18,12 +19,12 @@ class Instrument(ABC):
 class VanillaOption(Instrument):
     def __init__(self,
                  strike: float,
-                 ttm: float,
+                 expiry: Date,
                  is_call: bool):
         """ Vanilla Option """
         super().__init__()
         self._strike = strike
-        self._ttm = ttm
+        self._expiry = expiry
         self._is_call = is_call
 
     @property
@@ -31,8 +32,8 @@ class VanillaOption(Instrument):
         return self._strike
 
     @property
-    def ttm(self) -> float:
-        return self._ttm
+    def expiry(self) -> Date:
+        return self._expiry
 
     @property
     def is_call(self) -> bool:
