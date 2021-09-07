@@ -4,21 +4,23 @@
 Vanilla and exotic option pricing library to support quantitative R&D. Focus on pricing interesting/useful models 
 and contracts (including and beyond Black-Scholes), as well as calibration of financial models to market data.
 
-This library is under active development. Many of the exotic pricing algorithms will be translated into python from:
-https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
-
+This library is under active development, although the currently posted features are relatively stable.
 ## Currently Supported
 ### Models
 
 - Black-Scholes
 - Jump Diffusions: Merton, Kou
-- Levy: Variance Gamma, Normal Inverse Gaussian (NIG), CGMY
+- Levy: Variance Gamma, Normal Inverse Gaussian (NIG), CGMY/KoBoL
+- Stochastic Volatility: Heston (more to come)
 
 ### Pricing Methods
+- Analytical: closed form pricing when available, e.g. Black Scholes
 - Fourier: PROJ, Lewis, Gil-Peleaz
+- More in progress (PDE, Monte Carlo, etc) ...
 
 ### Model Calibration
 - Levy Model Calibration (VG, NIG, CGMY, MJD, Kou, etc)
+- Heston Stochastic Volatility Model Calibration
 
 ## Coming Soon !
 
@@ -26,8 +28,10 @@ https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
 - Models: Stochastic Volatility, Regime Switching, Stochastic Local Vol
 - Additional pricing methods, such as Mellin Series, PDE, Monte Carlo, etc.
 - Regime Switching Calibration
-- Stochastic Volatility Calibration
-- Credit model calibration
+- Credit model calibration 
+- Many of the exotic pricing algorithms will be translated into python from:
+https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
+
 
 ## User installation
 
