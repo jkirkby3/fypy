@@ -36,7 +36,7 @@ class MarketSlice(object):
         self.ask_prices = ask_prices
         self._set_prices()
 
-        # Implied Volatilies (these can be set/filled after initialization)
+        # Implied volatilities (these can be set/filled after initialization)
         self.bid_vols: Optional[np.ndarray] = None
         self.mid_vols: Optional[np.ndarray] = None
         self.ask_vols: Optional[np.ndarray] = None

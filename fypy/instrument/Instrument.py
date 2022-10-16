@@ -13,7 +13,7 @@ class Instrument(ABC):
         pass
 
 
-# TODO: add excercise class, vanilla option will take an excerise
+# TODO: add exercise class, vanilla option will take an exercise.
 
 
 class VanillaOption(Instrument):

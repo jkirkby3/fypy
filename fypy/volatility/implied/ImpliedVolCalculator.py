@@ -9,6 +9,7 @@ from fypy.pricing.analytical.black_scholes import *
 
 class ImpliedVolCalculator(ABC):
     """ Base class for implied volatiliy calculators on standard options """
+
     @abstractmethod
     def imply_vol(self,
                   price: float,
@@ -56,6 +57,7 @@ class ImpliedVolCalculator_Black76(ImpliedVolCalculator):
     Implied vol calculator that operates on Black76 option prices, ie underlying is forward. To apply with Black-Scholes
     on the spot, underlying = spot*Div(T)*Disc(T)
     """
+
     def __init__(self, fwd_curve: ForwardCurve, disc_curve: DiscountCurve):
         self._fwd_curve = fwd_curve
         self._disc_curve = disc_curve
@@ -69,12 +71,13 @@ class ImpliedVolCalculator_Black76(ImpliedVolCalculator):
         cp = 1 if is_call else -1
         disc = self._disc_curve(ttm)
         fwd = self._fwd_curve(ttm)
-        return implied_volatility_from_a_transformed_rational_guess(price/disc, fwd, strike, ttm, cp)
+        return implied_volatility_from_a_transformed_rational_guess(price / disc, fwd, strike, ttm, cp)
 
 
 if __name__ == '__main__':
     from fypy.termstructures.EquityForward import EquityForward
     from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
+
     spot = 100
     disc_curve = DiscountCurve_ConstRate(rate=0.0)
     fwd_curve = EquityForward(S0=spot, discount=disc_curve)

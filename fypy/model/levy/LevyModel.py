@@ -35,7 +35,7 @@ class LevyModel(FourierModel, ABC):
     @abstractmethod
     def symbol(self, xi: Union[float, np.ndarray]):
         """
-        Levy symbol, uniquely defines Characteristic Function via: chf(T,xi) = exp(T*symbol(xi)),  for all T>=0
+        Levy symbol, uniquely defines Characteristic Function via: chf(T,xi) = exp(T * symbol(xi)), for all T>=0
         :param xi: np.ndarray or float, points in frequency domain
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
