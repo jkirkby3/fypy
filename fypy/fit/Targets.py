@@ -31,3 +31,7 @@ class Targets(Objective):
         """ Evaluate the targets objective, returns residuals per target """
         return self._weights * (self._function() - self._targets)
 
+    def relative_error(self, min_price: 0.01, include_weights: bool = False) -> np.ndarray:
+        """ Evaluate the targets objective, returns residuals per target """
+        return self._weights * (self._function() - self._targets) / np.maximum(min_price, self._targets)\
+            if include_weights else (self._function() - self._targets) / np.maximum(min_price, self._targets)

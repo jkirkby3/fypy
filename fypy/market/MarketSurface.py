@@ -1,6 +1,28 @@
-from typing import Dict
-from fypy.market.MarketSlice import MarketSlice
+from typing import Dict, List, Optional
+from fypy.market.MarketSlice import MarketSlice, StrikeFilter
 from fypy.volatility.implied import ImpliedVolCalculator
+
+from abc import ABC, abstractmethod
+
+
+class SliceFilter(ABC):
+    @abstractmethod
+    def keep(self, market_slice: MarketSlice) -> bool:
+        raise NotImplementedError
+
+
+class SliceFilters(SliceFilter):
+    def __init__(self, filters: Optional[List[SliceFilter]] = None):
+        self._filters = filters or []
+
+    def add_filter(self, slice_filter: SliceFilter):
+        self._filters.append(slice_filter)
+
+    def keep(self, market_slice: MarketSlice) -> bool:
+        for slice_filter in self._filters:
+            if not slice_filter.keep(market_slice):
+                return False
+        return True
 
 
 class MarketSurface(object):
@@ -45,3 +67,16 @@ class MarketSurface(object):
         """
         for slice_ in self.slices.values():
             slice_.fill_implied_vols(calculator)
+
+    def filter_slices(self,
+                      slice_filter: SliceFilter,
+                      strike_filter: Optional[StrikeFilter] = None) -> 'MarketSurface':
+        filtered_surface = MarketSurface()
+        for ttm, market_slice in self.slices.items():
+            if slice_filter.keep(market_slice):
+                if strike_filter:
+                    filtered_surface.add_slice(ttm, market_slice=market_slice.filter_strikes(strike_filter))
+                else:
+                    filtered_surface.add_slice(ttm, market_slice=market_slice)
+
+        return filtered_surface
