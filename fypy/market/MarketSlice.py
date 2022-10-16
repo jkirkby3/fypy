@@ -1,6 +1,50 @@
 import numpy as np
-from typing import Optional
+from typing import Optional, List
+from abc import ABC, abstractmethod
+
 from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator
+
+
+class Strike(ABC):
+    @abstractmethod
+    def strike(self) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_call(self) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    def forward(self) -> float:
+        raise NotImplementedError
+
+
+class StrikeFilter(ABC):
+    @abstractmethod
+    def keep_strike(self, strike: Strike) -> bool:
+        raise NotImplementedError
+
+
+class OTMStrikeFilter(StrikeFilter):
+    def keep_strike(self, strike: Strike) -> bool:
+        if strike.is_call() and strike.forward() < strike.strike():
+            return True
+
+        return False
+
+
+class StrikeFilters(StrikeFilter):
+    def __init__(self, filters: Optional[List[StrikeFilter]] = None):
+        self._filters = filters or []
+
+    def add_filter(self, slice_filter: StrikeFilter):
+        self._filters.append(slice_filter)
+
+    def keep_strike(self, strike: Strike) -> bool:
+        for strike_filter in self._filters:
+            if not strike_filter.keep(strike):
+                return False
+        return True
 
 
 class MarketSlice(object):
@@ -75,6 +119,55 @@ class MarketSlice(object):
                 else:
                     self.ask_vols = vols
 
+    class SliceStrike(Strike):
+        def __init__(self,
+                     index: int,
+                     market_slice: 'MarketSlice'):
+            self._index = index
+            self._market_slice = market_slice
+
+        def strike(self) -> float:
+            return self._market_slice.strikes[self._index]
+
+        def forward(self) -> float:
+            return self._market_slice.F
+
+        def is_call(self) -> int:
+            return self._market_slice.is_calls[self._index]
+
+    def filter_strikes(self, strike_filter: StrikeFilter):
+        strikes = []
+        bid_prices = []
+        mid_prices = []
+        ask_prices = []
+        is_calls = []
+
+        for i in range(len(self.strikes)):
+            strike = MarketSlice.SliceStrike(index=i, market_slice=self)
+            if strike_filter.keep_strike(strike):
+                strikes.append(self.strikes[i])
+                if self.bid_prices is not None:
+                    bid_prices.append(self.bid_prices[i])
+
+                if self.mid_prices is not None:
+                    mid_prices.append(self.mid_prices[i])
+
+                if self.ask_prices is not None:
+                    ask_prices.append(self.ask_prices[i])
+
+                is_calls.append(self.is_calls[i])
+
+        new_slice = MarketSlice(T=self.T,
+                                F=self.F,
+                                disc=self.disc,
+                                strikes=np.asarray(strikes),
+                                bid_prices=np.asarray(bid_prices),
+                                mid_prices=np.asarray(mid_prices),
+                                ask_prices=np.asarray(ask_prices),
+                                is_calls=np.asarray(is_calls, dtype=int))
+
+        return new_slice
+
     def _set_prices(self):
         if self.mid_prices is None:
             if self.bid_prices is None or self.ask_prices is None:
@@ -103,3 +196,8 @@ if __name__ == '__main__':
     ivc = ImpliedVolCalculator_Black76(fwd_curve=fwd, disc_curve=disc_curve)
     mkt_slice.fill_implied_vols(calculator=ivc)
     vols = mkt_slice.mid_vols
+
+    print(len(mkt_slice.strikes))
+
+    filtered = mkt_slice.filter_strikes(strike_filter=OTMStrikeFilter())
+    print(len(filtered.strikes))

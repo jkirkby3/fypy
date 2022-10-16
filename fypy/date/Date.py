@@ -13,6 +13,21 @@ class Date(datetime):
                    second=date.second, microsecond=date.microsecond, tzinfo=date.tzinfo, fold=date.fold)
 
     @classmethod
+    def from_datetime_date(cls, date: datetime.date) -> 'Date':
+        """ Create a Date from a datetime.date object """
+        return cls(year=date.year, month=date.month, day=date.day)
+
+    @classmethod
+    def from_str(cls, date: str, fmt: str = '%Y-%m-%d') -> 'Date':
+        """
+        Create a Date obj from string with known format
+        :param date: str, a date, e.g. '2015-02-01'
+        :param fmt: str, format of the date string, e.g. '%Y-%m-%d'
+        :return: Date, the str date converted to Date obj
+        """
+        return cls.from_datetime(datetime.strptime(date, fmt))
+
+    @classmethod
     def today(cls) -> 'Date':
         date_now = cls.now()
         return Date(day=date_now.day, year=date_now.year, month=date_now.month)

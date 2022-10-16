@@ -8,7 +8,7 @@ class ForwardCurve(ABC):
     Abstract base class for deterministic forward curves.
     Examples:
         Equity:    F(T) = S_0 * Div(T) / Disc(T)   (more generally includes dividends, borrow cost, etc.)
-        FX:        F(T) = FX_0 * Div_f(T) / Div_d(T)
+        FX:        F(T) = FX_0 * Disc_f(T) / Disc_d(T)
         Rates:     F(T) = IBOR(T), the forward rate for some IBOR curve, e.g. LIBOR 3M
         Commodity: F(T) = Futures(T), ie. some interpolation of the futures curve
     """
@@ -42,6 +42,5 @@ class ForwardCurve(ABC):
         :param T: float, end time
         :return: float, drift implied over [t,T]
         """
-        return np.log(self.fwd_T(T)/self.fwd_T(t)) / (T - t)
-
-
+        T = max(T, t + 1e-09)
+        return np.log(self.fwd_T(T) / self.fwd_T(t)) / (T - t)
