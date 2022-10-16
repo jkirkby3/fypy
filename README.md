@@ -1,6 +1,5 @@
 
 # FyPy
-
 Vanilla and exotic option pricing library to support quantitative R&D. Focus on pricing interesting/useful models 
 and contracts (including and beyond Black-Scholes), as well as calibration of financial models to market data.
 
