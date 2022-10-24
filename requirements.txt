@@ -11,3 +11,6 @@ scipy>=1.6.2
 six==1.15.0
 py_lets_be_rational>=1.0.1
 pandas>=1.2.4
+setuptools~=65.3.0
+requests-cache
+yfinance
