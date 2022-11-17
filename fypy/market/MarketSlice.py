@@ -29,6 +29,8 @@ class OTMStrikeFilter(StrikeFilter):
     def keep_strike(self, strike: Strike) -> bool:
         if strike.is_call() and strike.forward() < strike.strike():
             return True
+        if not strike.is_call() and strike.forward() >= strike.strike():
+            return True
 
         return False
 
