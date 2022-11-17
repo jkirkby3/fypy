@@ -18,6 +18,10 @@ class Strike(ABC):
     def forward(self) -> float:
         raise NotImplementedError
 
+    @abstractmethod
+    def mid_price(self) -> Optional[float]:
+        raise NotImplementedError
+
 
 class StrikeFilter(ABC):
     @abstractmethod
@@ -35,6 +39,17 @@ class OTMStrikeFilter(StrikeFilter):
         return False
 
 
+class MidPriceFilter(StrikeFilter):
+    def __init__(self, min_price: float):
+        self._min_price = min_price
+
+    def keep_strike(self, strike: Strike) -> bool:
+        if strike.mid_price() < self._min_price:
+            return False
+
+        return True
+
+
 class StrikeFilters(StrikeFilter):
     def __init__(self, filters: Optional[List[StrikeFilter]] = None):
         self._filters = filters or []
@@ -44,7 +59,7 @@ class StrikeFilters(StrikeFilter):
 
     def keep_strike(self, strike: Strike) -> bool:
         for strike_filter in self._filters:
-            if not strike_filter.keep(strike):
+            if not strike_filter.keep_strike(strike):
                 return False
         return True
 
@@ -136,6 +151,9 @@ class MarketSlice(object):
 
         def is_call(self) -> int:
             return self._market_slice.is_calls[self._index]
+
+        def mid_price(self) -> Optional[float]:
+            return self._market_slice.mid_prices[self._index] if self._market_slice.mid_prices is not None else None
 
     def filter_strikes(self, strike_filter: StrikeFilter):
         strikes = []
