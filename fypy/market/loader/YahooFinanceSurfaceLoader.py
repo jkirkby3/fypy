@@ -16,7 +16,7 @@ class YahooFinanceLoader(object):
                  ):
         self._dc = dc
 
-    def load_from_file(self, fpath: str) -> MarketSurface:
+    def load_from_file(self, fpath: str) -> Tuple[MarketSurface, EquityForward]:
         df = pd.read_csv(fpath)
         return self.load_from_frame(df)
 
@@ -24,7 +24,7 @@ class YahooFinanceLoader(object):
                       ticker: str,
                       disc_curve=DiscountCurve_ConstRate(rate=0),
                       div_disc=DiscountCurve_ConstRate(rate=0)
-                      ) -> MarketSurface:
+                      ) -> Tuple[MarketSurface, EquityForward]:
         df = self.load_df_from_api(ticker=ticker)
         return self.load_from_frame(df=df, disc_curve=disc_curve, div_disc=div_disc)
 
@@ -74,7 +74,7 @@ class YahooFinanceLoader(object):
                         df: pd.DataFrame,
                         disc_curve=DiscountCurve_ConstRate(rate=0),
                         div_disc=DiscountCurve_ConstRate(rate=0)
-                        ) -> MarketSurface:
+                        ) -> Tuple[MarketSurface, EquityForward]:
         d = df.iloc[0].date
         date = Date.from_str(d) if isinstance(d, str) else Date.from_datetime_date(d)
         spot = df.iloc[0]['spot']
@@ -104,7 +104,7 @@ class YahooFinanceLoader(object):
 
             surface.add_slice(ttm=ttm, market_slice=market_slice)
 
-        return surface
+        return surface, fwd_curve
 
 
 if __name__ == '__main__':
