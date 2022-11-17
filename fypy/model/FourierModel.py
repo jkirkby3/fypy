@@ -52,7 +52,7 @@ class FourierModel(Calibratable, ABC):
 
     def spot(self) -> float:
         """
-        Get the spot. In the case where a spot doesnt really make sense, it can simply return the default
+        Get the spot. In the case where a spot doesn't really make sense, it can simply return the default
         implementation, which is forward at time = 0
         """
         return self._forwardCurve.spot()

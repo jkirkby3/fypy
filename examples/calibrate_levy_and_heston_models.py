@@ -87,7 +87,7 @@ def targets_pricer() -> np.ndarray:
     return np.concatenate(all_prices)
 
 
-# Create the claibrator for the model
+# Create the calibrator for the model
 calibrator = Calibrator(model=model, minimizer=LeastSquares())
 
 # Targets for the calibrator
