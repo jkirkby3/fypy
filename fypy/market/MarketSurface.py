@@ -1,5 +1,8 @@
 from typing import Dict, List, Optional
 from fypy.market.MarketSlice import MarketSlice, StrikeFilter
+from fypy.termstructures.DiscountCurve import DiscountCurve
+from fypy.termstructures.EquityForward import EquityForward
+from fypy.termstructures.ForwardCurve import ForwardCurve
 from fypy.volatility.implied import ImpliedVolCalculator
 
 from abc import ABC, abstractmethod
@@ -26,12 +29,19 @@ class SliceFilters(SliceFilter):
 
 
 class MarketSurface(object):
-    def __init__(self, slices: Dict[float, MarketSlice] = None):
+    def __init__(self,
+                 slices: Dict[float, MarketSlice] = None,
+                 forward_curve: Optional[ForwardCurve] = None,
+                 discount_curve: Optional[DiscountCurve] = None):
         """
         Container class for an option price surface, composed of individual market slices, one per tenor
         :param slices: dict: {float, MarketSlice}, contains all slices (you can add more later)
+        :param forward_curve: Optional[ForwardCurve], a forward curve for the market.
+        :param discount_curve: Optional[DiscountCurve], the discount curve.
         """
         self._slices = slices or {}
+        self._forward_curve = forward_curve
+        self._discount_curve = discount_curve
 
     def add_slice(self, ttm: float, market_slice: MarketSlice):
         """
@@ -49,9 +59,31 @@ class MarketSurface(object):
         return self._slices
 
     @property
+    def forward_curve(self) -> Optional[ForwardCurve]:
+        """ Return the forward curve, if it exists. """
+        return self._forward_curve
+
+    @property
+    def eq_forward_curve(self) -> Optional[EquityForward]:
+        """ If there is a forward curve, and it is an equity forward curve, return it. Otherwise, return None. """
+        if isinstance(self._forward_curve, EquityForward):
+            return self._forward_curve
+        return None
+
+    @property
+    def spot(self) -> Optional[float]:
+        """ If there is a forward curve, pull of the spot and return it, else return None. """
+        return self._forward_curve(0.) if self._forward_curve else None
+
+    @property
+    def discount_curve(self):
+        """ Return the discount curve, if it exists. """
+        return self._discount_curve
+
+    @property
     def ttms(self):
         """ Get the ttms in the surface """
-        return self._slices.keys()
+        return list(self._slices.keys())
 
     @property
     def num_slices(self) -> int:

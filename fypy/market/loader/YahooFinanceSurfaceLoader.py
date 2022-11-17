@@ -24,7 +24,7 @@ class YahooFinanceLoader(object):
                       ticker: str,
                       disc_curve=DiscountCurve_ConstRate(rate=0),
                       div_disc=DiscountCurve_ConstRate(rate=0)
-                      ) -> Tuple[MarketSurface, EquityForward]:
+                      ) -> MarketSurface:
         df = self.load_df_from_api(ticker=ticker)
         return self.load_from_frame(df=df, disc_curve=disc_curve, div_disc=div_disc)
 
@@ -74,7 +74,7 @@ class YahooFinanceLoader(object):
                         df: pd.DataFrame,
                         disc_curve=DiscountCurve_ConstRate(rate=0),
                         div_disc=DiscountCurve_ConstRate(rate=0)
-                        ) -> Tuple[MarketSurface, EquityForward]:
+                        ) -> MarketSurface:
         d = df.iloc[0].date
         date = Date.from_str(d) if isinstance(d, str) else Date.from_datetime_date(d)
         spot = df.iloc[0]['spot']
@@ -84,7 +84,7 @@ class YahooFinanceLoader(object):
         has_discount = 'discount' in df
         has_forward = 'forward' in df
 
-        surface = MarketSurface()
+        surface = MarketSurface(forward_curve=fwd_curve, discount_curve=disc_curve)
 
         for tenor in all_tenors:
             expiry = Date.from_str(tenor)
@@ -104,7 +104,7 @@ class YahooFinanceLoader(object):
 
             surface.add_slice(ttm=ttm, market_slice=market_slice)
 
-        return surface, fwd_curve
+        return surface
 
 
 if __name__ == '__main__':
