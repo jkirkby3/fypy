@@ -16,7 +16,7 @@ class YahooFinanceLoader(object):
                  ):
         self._dc = dc
 
-    def load_from_file(self, fpath: str) -> Tuple[MarketSurface, EquityForward]:
+    def load_from_file(self, fpath: str) -> MarketSurface:
         df = pd.read_csv(fpath)
         return self.load_from_frame(df)
 

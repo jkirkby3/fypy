@@ -103,7 +103,8 @@ class MarketSurface(object):
     def filter_slices(self,
                       slice_filter: SliceFilter,
                       strike_filter: Optional[StrikeFilter] = None) -> 'MarketSurface':
-        filtered_surface = MarketSurface()
+        filtered_surface = MarketSurface(forward_curve=self._forward_curve,
+                                         discount_curve=self._discount_curve)
         for ttm, market_slice in self.slices.items():
             if slice_filter.keep(market_slice):
                 if strike_filter:
