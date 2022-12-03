@@ -32,28 +32,27 @@ div_disc = DiscountCurve_ConstRate(rate=q)
 fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 
 # ============================
-# Create Levy Model (to generate a synthetic market to fit to)
+# Create Model (to generate a synthetic market to fit to)
 # ============================
-model_id = 7
-if model_id == 1:
-    model = VarianceGamma(sigma=0.4, theta=0.1, nu=0.6, forwardCurve=fwd, discountCurve=disc_curve)
-elif model_id == 2:
-    model = NIG(alpha=10, beta=-3, delta=0.4, forwardCurve=fwd, discountCurve=disc_curve)
-elif model_id == 3:
-    model = CMGY(C=0.01, G=4, M=12, Y=1.3, forwardCurve=fwd, discountCurve=disc_curve)
-elif model_id == 4:
-    model = MertonJD(sigma=0.15, lam=0.3, muj=0., sigj=0.3, forwardCurve=fwd, discountCurve=disc_curve)
-elif model_id == 5:
-    model = KouJD(sigma=0.14, lam=2., p_up=0.3, eta1=20, eta2=15, forwardCurve=fwd, discountCurve=disc_curve)
-elif model_id == 6:
-    model = BlackScholes(sigma=0.1, forwardCurve=fwd)
-elif model_id == 7:
-    model = Heston(v_0=0.02, theta=0.02, kappa=3., sigma_v=0.2, rho=-0.8, forwardCurve=fwd, discountCurve=disc_curve)
-else:
-    raise NotImplementedError
+model_name = 'NIG'  # Choose this name, then override params if desired
+
+models = {
+    'VG': VarianceGamma(sigma=0.2, theta=-0.1, nu=0.6, forwardCurve=fwd, discountCurve=disc_curve),
+    'BG': BilateralGamma(alpha_p=1.18, lambda_p=10.57, alhpa_m=1.44, lambda_m=5.57, forwardCurve=fwd,
+                         discountCurve=disc_curve),
+    'NIG': NIG(alpha=10, beta=-3, delta=0.4, forwardCurve=fwd, discountCurve=disc_curve),
+    'CGMY': CMGY(C=0.05, G=4, M=10, Y=1.3, forwardCurve=fwd, discountCurve=disc_curve),
+    'MJD': MertonJD(sigma=0.15, lam=0.3, muj=-0.2, sigj=0.3, forwardCurve=fwd, discountCurve=disc_curve),
+    'KDE': KouJD(sigma=0.14, lam=2., p_up=0.3, eta1=20, eta2=15, forwardCurve=fwd, discountCurve=disc_curve),
+    'BSM': BlackScholes(sigma=0.2, forwardCurve=fwd),
+    'Hes': Heston(v_0=0.04, theta=0.04, kappa=0.1, sigma_v=0.5, rho=-0.5, forwardCurve=fwd, discountCurve=disc_curve)
+}
+
+# Create the pricers and attach to each model
+model = models.get(model_name)
 
 true_params = model.get_params()
-pricer = ProjEuropeanPricer(model=model, N=2 ** 10)
+pricer = ProjEuropeanPricer(model=model, N=2 ** 11, L=16 if model_name == 'Hes' else 12)
 
 # Initialize market surface, fill it in with slices
 surface = MarketSurface()

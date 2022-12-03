@@ -26,6 +26,8 @@ fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 
 models = {
     'VG': VarianceGamma(sigma=0.2, theta=-0.1, nu=0.6, forwardCurve=fwd, discountCurve=disc_curve),
+    'BG': BilateralGamma(alpha_p=1.18, lambda_p=10.57, alhpa_m=1.44, lambda_m=5.57, forwardCurve=fwd,
+                         discountCurve=disc_curve),
     'NIG': NIG(alpha=10, beta=-3, delta=0.4, forwardCurve=fwd, discountCurve=disc_curve),
     'CGMY': CMGY(C=0.05, G=4, M=10, Y=1.3, forwardCurve=fwd, discountCurve=disc_curve),
     'MJD': MertonJD(sigma=0.15, lam=0.3, muj=-0.2, sigj=0.3, forwardCurve=fwd, discountCurve=disc_curve),
@@ -44,7 +46,7 @@ pricers['Hes'] = ProjEuropeanPricer(model=models['Hes'], N=2 ** 12, L=18)  # Hes
 # Set the strike Range
 strikes = np.linspace(50, 150, 100)
 is_calls = np.zeros(len(strikes), dtype=bool)
-rel_strikes = strikes/S0
+rel_strikes = strikes / S0
 
 # Compute Implied vols for each model and price
 for model_name, pricer in pricers.items():
@@ -58,4 +60,3 @@ for model_name, pricer in pricers.items():
     plt.ylabel('implied vol')
 
 plt.show()
-
