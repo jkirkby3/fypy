@@ -106,10 +106,8 @@ class Heston(FourierModel):
         psi = (1.0 - G * eDt) / (1.0 - G)
         A = ((kappa * theta) / omega2) * (bD * T - 2.0 * np.log(psi))
 
-        w = -0.5 * theta  # convexity correction
-        rn_drift = self.forwardCurve.drift(0, T) + w
-
-        return np.exp(A + B * v_0 + 1j * xi * rn_drift * T)
+        drift = self.forwardCurve.drift(0, T)
+        return np.exp(A + B * v_0 + 1j * xi * drift * T)
 
     # =============================
     # Calibration Interface Implementation
