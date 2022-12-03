@@ -42,12 +42,15 @@ class ImpliedVolCalculator(ABC):
         """
         vols = np.zeros_like(prices)
 
-        # Compute Implied Volsv
+        # Compute Implied Vols
         for i in range(len(vols)):
-            vols[i] = self.imply_vol(price=prices[i],
-                                     strike=strikes[i],
-                                     is_call=is_calls[i],
-                                     ttm=ttm)
+            try:
+                vols[i] = self.imply_vol(price=prices[i],
+                                         strike=strikes[i],
+                                         is_call=is_calls[i],
+                                         ttm=ttm)
+            except Exception as e:
+                vols[i] = np.nan
 
         return vols
 

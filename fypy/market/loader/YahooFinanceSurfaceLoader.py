@@ -91,6 +91,8 @@ class YahooFinanceLoader(object):
             ttm = self._dc.year_fraction(start=date, end=expiry)
 
             df_tenor = df[df['expiry'] == tenor]
+            df_tenor.sort_values('strike', inplace=True)
+
             strikes = df_tenor['strike'].values
             is_calls = np.asarray(df_tenor['isCall'], dtype=int)
 
