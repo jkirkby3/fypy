@@ -99,7 +99,9 @@ class MertonJD(LevyModel):
         return 4
 
     def param_bounds(self) -> Optional[List[Tuple]]:
+        # sigma, lam, muj, sigj
         return [(0, np.inf), (0, np.inf), (-np.inf, np.inf), (0, np.inf)]
 
     def default_params(self) -> Optional[np.ndarray]:
+        # sigma, lam, muj, sigj
         return np.asarray([0.2, 0.2, 0.0, 0.2])

@@ -6,21 +6,16 @@ import numpy as np
 from typing import List, Tuple, Optional, Union
 
 
-class Heston(FourierModel):
+class _HestonBase(FourierModel):
     def __init__(self,
                  forwardCurve: ForwardCurve,
-                 discountCurve: DiscountCurve,
-                 v_0: float = 0.04,
-                 theta: float = 0.04,
-                 kappa: float = 2.,
-                 sigma_v: float = 0.3,
-                 rho: float = -0.6):
+                 discountCurve: DiscountCurve):
         """
-        Heston model class. This model is an instance of a Fourier model, SLV, etc.
+        Base Heston model class, used for Heston and Heston Jump models (Bates)
         :param forwardCurve: EquityForward curve object, contains all term structure info
         """
         super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve)
-        self._params = np.asarray([v_0, theta, kappa, sigma_v, rho])
+        self._params: Optional[np.ndarray] = None
 
     # =============================
     # Model Parameters
@@ -55,7 +50,7 @@ class Heston(FourierModel):
     # Fourier Interface Implementation
     # =============================
 
-    def cumulants(self, T: float) -> Cumulants:
+    def _heston_cumulants(self, T: float) -> Cumulants:
         """
         Evaluate the cumulants of the model at a given time. This is useful e.g. to figure out integration bounds etc
         during pricing
@@ -82,7 +77,7 @@ class Heston(FourierModel):
                          c2=c2,
                          c4=0)
 
-    def chf(self, T: float, xi: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    def _heston_chf(self, T: float, xi: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
         """
         Characteristic function
         :param T: float, time to maturity
@@ -113,12 +108,66 @@ class Heston(FourierModel):
     # Calibration Interface Implementation
     # =============================
 
+    def set_params(self, params: np.ndarray):
+        self._params = params
+        return self
+
+    def get_params(self) -> np.ndarray:
+        return self._params
+
+    def _heston_param_bounds(self) -> Optional[List[Tuple]]:
+        # v_0, theta, kappa, sigma_v, rho
+        return [(0.0001, np.inf), (0.0001, np.inf), (0., 50.), (0.00001, 10.), (-1., 1.)]
+
+
+class Heston(_HestonBase):
+    def __init__(self,
+                 forwardCurve: ForwardCurve,
+                 discountCurve: DiscountCurve,
+                 v_0: float = 0.04,
+                 theta: float = 0.04,
+                 kappa: float = 2.,
+                 sigma_v: float = 0.3,
+                 rho: float = -0.6):
+        """
+        Heston model class. This model is an instance of a Fourier model, SLV, etc.
+        :param forwardCurve: EquityForward curve object, contains all term structure info
+        """
+        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve)
+        self._params = np.asarray([v_0, theta, kappa, sigma_v, rho])
+
+    # =============================
+    # Fourier Interface Implementation
+    # =============================
+
+    def cumulants(self, T: float) -> Cumulants:
+        """
+        Evaluate the cumulants of the model at a given time. This is useful e.g. to figure out integration bounds etc
+        during pricing
+        :param T: float, time to maturity (time at which cumulants are evaluated)
+        :return: Cumulants object
+        """
+        return self._heston_cumulants(T)
+
+    def chf(self, T: float, xi: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        """
+        Characteristic function
+        :param T: float, time to maturity
+        :param xi: np.ndarray or float, points in frequency domain
+        :return: np.ndarray or float, characteristic function evaluated at input points in frequency domain
+        """
+        return self._heston_chf(T, xi)
+
+    # =============================
+    # Calibration Interface Implementation
+    # =============================
+
     def num_params(self) -> int:
         return 5
 
     def param_bounds(self) -> Optional[List[Tuple]]:
         # v_0, theta, kappa, sigma_v, rho
-        return [(0.0001, np.inf), (0.0001, np.inf), (0., 50.), (0.00001, 10.), (-1., 1.)]
+        return self._heston_param_bounds()
 
     def default_params(self) -> Optional[np.ndarray]:
         """
@@ -131,10 +180,3 @@ class Heston(FourierModel):
         """
         # v_0, theta, kappa, sigma_v, rho
         return np.asarray([0.04, 0.04, 2., 0.3, -0.6])
-
-    def set_params(self, params: np.ndarray):
-        self._params = params
-        return self
-
-    def get_params(self) -> np.ndarray:
-        return self._params
