@@ -8,6 +8,7 @@ from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Bl
 from fypy.model.levy import *
 from fypy.model.sv.Heston import Heston
 from fypy.model.sv.Bates import Bates
+from fypy.model.sv.HestonDEJumps import HestonDEJumps
 import matplotlib.pyplot as plt
 
 # ============================
@@ -37,6 +38,8 @@ models = {
     'Hes': Heston(v_0=0.04, theta=0.04, kappa=0.1, sigma_v=0.5, rho=-0.5, forwardCurve=fwd, discountCurve=disc_curve),
     'Bates': Bates(v_0=0.04, theta=0.04, kappa=0.1, sigma_v=0.5, rho=-0.5, lam=0.15, muj=-0.1, sigj=0.3,
                    forwardCurve=fwd, discountCurve=disc_curve),
+    'Hes-DE': HestonDEJumps(v_0=0.04, theta=0.04, kappa=0.1, sigma_v=0.5, rho=-0.5,
+                            lam=0.2, p_up=0.3, eta1=20, eta2=15, forwardCurve=fwd, discountCurve=disc_curve),
 }
 
 # Create Implied Vol calculator

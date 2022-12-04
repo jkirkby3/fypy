@@ -1,12 +1,13 @@
 from fypy.model.FourierModel import Cumulants, FourierModel
 from fypy.termstructures.ForwardCurve import ForwardCurve
 from fypy.termstructures.DiscountCurve import DiscountCurve
+from abc import ABC, abstractmethod
 
 import numpy as np
 from typing import List, Tuple, Optional, Union
 
 
-class _HestonBase(FourierModel):
+class _HestonBase(FourierModel, ABC):
     def __init__(self,
                  forwardCurve: ForwardCurve,
                  discountCurve: DiscountCurve):
@@ -115,6 +116,10 @@ class _HestonBase(FourierModel):
     def get_params(self) -> np.ndarray:
         return self._params
 
+    def _heston_default_params(self) -> List[float]:
+        # v_0, theta, kappa, sigma_v, rho
+        return [0.04, 0.04, 2., 0.3, -0.6]
+
     def _heston_param_bounds(self) -> Optional[List[Tuple]]:
         # v_0, theta, kappa, sigma_v, rho
         return [(0.0001, np.inf), (0.0001, np.inf), (0., 50.), (0.00001, 10.), (-1., 1.)]
@@ -179,4 +184,4 @@ class Heston(_HestonBase):
         :return:
         """
         # v_0, theta, kappa, sigma_v, rho
-        return np.asarray([0.04, 0.04, 2., 0.3, -0.6])
+        return np.asarray(self._heston_param_bounds())
