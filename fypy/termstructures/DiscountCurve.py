@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, Callable, List
 import numpy as np
+from scipy.interpolate import interp1d
+
+from fypy.termstructures.Interpolation import LogLinearInterpolation
 
 
 class DiscountCurve(ABC):
@@ -54,3 +57,62 @@ class DiscountCurve_ConstRate(DiscountCurve):
         :return: float or np.ndarray, discounts(s) at time(s) in the future
         """
         return np.exp(-self._r * T)
+
+
+class EmptyDiscountCurve(DiscountCurve):
+    """ Empty discount curve, always returns 1.0. """
+
+    def discount_T(self, T: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        """
+        Discount at time T in the future, this version always returns 1.0
+        :param T: float or np.ndarray, time(s) in the future
+        :return: float or np.ndarray, discounts(s) at time(s) in the future
+        """
+        return 1.0
+
+
+class InterpolatedDiscountCurve(DiscountCurve):
+    def __init__(self,
+                 interp: Callable):
+        """
+        Interpolated Discount curve class
+        :param interp: an interpolation of x and y values, representing times and discounts
+        """
+        self._interp = interp
+
+    def discount_T(self, T: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        return self._interp(T)
+
+    @classmethod
+    def from_linear(cls,
+                    ttms: Union[np.ndarray, List],
+                    discounts: Union[np.ndarray, List]) -> 'DiscountCurve':
+        """
+        Convenience method to construct a linearly interpolated discount curve
+        :param ttms: array-like, the x-points, correspond to tenors
+            Note: make sure that the zeroth point is zero
+        :param discounts: array-like, the y-points, correspond to discounts
+        :return: DiscountCurve, interpolation of points and values
+        """
+        if not np.abs(ttms[0]) <= 1e-14 or not np.abs(discounts[0] - 1.) <= 1e-14:
+            raise ValueError("The first point in the interpolation must be (0, 1.0)")
+
+        interp = interp1d(ttms, discounts, fill_value='extrapolate', bounds_error=False)
+        return cls(interp=interp)
+
+    @classmethod
+    def from_log_linear(cls,
+                        ttms: Union[np.ndarray, List],
+                        discounts: Union[np.ndarray, List]) -> 'DiscountCurve':
+        """
+        Convenience method to construct a log-linearly interpolated discount curve
+        :param ttms: array-like, the x-points, correspond to tenors
+            Note: make sure that the zeroth point is zero
+        :param discounts: array-like, the y-points, correspond to discounts
+        :return: DiscountCurve, interpolation of points and values
+        """
+        if not np.abs(ttms[0]) <= 1e-14 or not np.abs(discounts[0] - 1.) <= 1e-14:
+            raise ValueError("The first point in the interpolation must be (0, 1.0)")
+
+        interp = LogLinearInterpolation(points=ttms, values=discounts)
+        return cls(interp=interp)

@@ -6,7 +6,7 @@ from typing import Tuple, List
 import pandas as pd
 import numpy as np
 
-from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
+from fypy.termstructures.DiscountCurve import EmptyDiscountCurve, DiscountCurve
 from fypy.termstructures.EquityForward import EquityForward
 
 
@@ -16,14 +16,18 @@ class YahooFinanceLoader(object):
                  ):
         self._dc = dc
 
-    def load_from_file(self, fpath: str) -> MarketSurface:
+    def load_from_file(self,
+                       fpath: str,
+                       disc_curve: DiscountCurve = EmptyDiscountCurve(),
+                       div_disc: DiscountCurve = EmptyDiscountCurve()
+                       ) -> MarketSurface:
         df = pd.read_csv(fpath)
-        return self.load_from_frame(df)
+        return self.load_from_frame(df, disc_curve=disc_curve, div_disc=div_disc)
 
     def load_from_api(self,
                       ticker: str,
-                      disc_curve=DiscountCurve_ConstRate(rate=0),
-                      div_disc=DiscountCurve_ConstRate(rate=0)
+                      disc_curve: DiscountCurve = EmptyDiscountCurve(),
+                      div_disc: DiscountCurve = EmptyDiscountCurve()
                       ) -> MarketSurface:
         df = self.load_df_from_api(ticker=ticker)
         return self.load_from_frame(df=df, disc_curve=disc_curve, div_disc=div_disc)
@@ -72,8 +76,8 @@ class YahooFinanceLoader(object):
 
     def load_from_frame(self,
                         df: pd.DataFrame,
-                        disc_curve=DiscountCurve_ConstRate(rate=0),
-                        div_disc=DiscountCurve_ConstRate(rate=0)
+                        disc_curve: DiscountCurve = EmptyDiscountCurve(),
+                        div_disc: DiscountCurve = EmptyDiscountCurve(),
                         ) -> MarketSurface:
         d = df.iloc[0].date
         date = Date.from_str(d) if isinstance(d, str) else Date.from_datetime_date(d)
