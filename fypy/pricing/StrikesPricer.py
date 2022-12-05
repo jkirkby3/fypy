@@ -28,7 +28,29 @@ class StrikesPricer(ABC):
         :param is_calls: np.array[bool], indicators of if strikes are calls (true) or puts (false)
         :return: np.array, prices of strikes
         """
-        return np.asarray([self.price(T, strike, is_call) for strike, is_call in zip(K, is_calls)])
+        output = np.empty_like(K, dtype=float)
+        self.price_strikes_fill(T=T, K=K, is_calls=is_calls, output=output)
+        return output
+
+    def price_strikes_fill(self,
+                           T: float,
+                           K: np.ndarray,
+                           is_calls: np.ndarray,
+                           output: np.ndarray):
+        """
+        Price a set of set of strikes (at same time to maturity, ie one slice of a surface)
+        Override this method if given a more efficient implementation for multiple strikes.
+
+        :param T: float, time to maturity of options
+        :param K: np.array, strikes of options
+        :param is_calls: np.ndarray[bool], indicators of if strikes are calls (true) or puts (false)
+        :param output: np.ndarray[float], the output to fill in with prices, must be same size as K and is_calls
+        :return: None, this method fills in the output array, make sure its sized properly first
+        """
+        if len(output) != len(is_calls) or len(K) != len(is_calls):
+            raise ValueError("You supply")
+        for i in range(len(K)):
+            output[i] = self.price(T, K[i], is_calls[i])
 
     def price(self, T: float, K: float, is_call: bool) -> float:
         """

@@ -17,11 +17,11 @@ class CarrMadanEuropeanPricer(StrikesPricer):
         self._N = N
         self._logS0 = np.log(self._model.spot())
 
-    def price_strikes(self,
-                      T: float,
-                      K: np.ndarray,
-                      is_calls: np.ndarray):
-
+    def price_strikes_fill(self,
+                           T: float,
+                           K: np.ndarray,
+                           is_calls: np.ndarray,
+                           output: np.ndarray):
         lam = 2 * np.pi / (self._N * self._eta)
         b = self._N * lam / 2
 

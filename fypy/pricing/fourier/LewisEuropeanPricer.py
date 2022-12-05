@@ -22,17 +22,19 @@ class LewisEuropeanPricer(StrikesPricer):
         self._N = N
         self._interp = interp
 
-    def price_strikes(self,
-                      T: float,
-                      K: np.ndarray,
-                      is_calls: np.ndarray) -> np.ndarray:
+    def price_strikes_fill(self,
+                           T: float,
+                           K: np.ndarray,
+                           is_calls: np.ndarray,
+                           output: np.ndarray):
         """
         Price a set of set of strikes (at same time to maturity, ie one slice of a surface), using FFT with
         interpolation between strikes (note: using one by one pricing can be more accurate but much slower)
         :param T: float, time to maturity of options
         :param K: np.array, strikes of options
         :param is_calls: np.array[bool], indicators of if strikes are calls (true) or puts (false)
-        :return: np.array, prices of strikes
+        :param output: np.ndarray[float], the output to fill in with prices, must be same size as K and is_calls
+        :return: None, this method fills in the output array, make sure its sized properly first
         """
         N = self._N
         dx = self._limit / N
@@ -63,11 +65,9 @@ class LewisEuropeanPricer(StrikesPricer):
         else:
             raise NotImplementedError("Only linear and cubic interpolation supported")
 
-        prices = sf - np.sqrt(S0 * K) * disc / np.pi * spline(np.log(S0 / K))
+        output = sf - np.sqrt(S0 * K) * disc / np.pi * spline(np.log(S0 / K))
 
-        prices[~is_calls] -= sf - K[~is_calls] * disc
-
-        return prices
+        output[~is_calls] -= sf - K[~is_calls] * disc
 
     def price(self, T: float, K: float, is_call: bool):
         """

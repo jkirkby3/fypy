@@ -9,6 +9,7 @@ from fypy.model.levy.MertonJD import MertonJD
 from fypy.model.levy.KouJD import KouJD
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.pricing.analytical.black_scholes import black76_price
+from fypy.pricing.analytical.black_scholes import black76_price, black76_price_strikes
 
 
 class Test_Proj_European(unittest.TestCase):
@@ -34,6 +35,14 @@ class Test_Proj_European(unittest.TestCase):
                 price = pricer.price(T=T, K=K, is_call=is_call)
                 true_price = black76_price(F=fwd(T), K=K, is_call=is_call, vol=sigma, disc=disc_curve(T), T=T)
                 self.assertAlmostEqual(price, true_price, 13)
+
+        strikes = np.asarray([S0-25, S0, S0+5, S0+25])
+        is_calls = np.asarray([True for _ in range(len(strikes))])
+        prices_bsm = black76_price_strikes(F=fwd(T), K=strikes, is_calls=is_calls, vol=sigma, disc=disc_curve(T), T=T)
+        prices_proj = pricer.price_strikes(T=T, K=strikes, is_calls=is_calls)
+
+        for i in range(len(prices_bsm)):
+            self.assertAlmostEqual(prices_bsm[i], prices_proj[i], 13)
 
     def test_price_match_levy(self):
         S0 = 100
