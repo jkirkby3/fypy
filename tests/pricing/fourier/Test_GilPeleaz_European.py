@@ -2,6 +2,7 @@ import unittest
 
 from fypy.pricing.fourier.GilPeleazEuropeanPricer import GilPeleazEuropeanPricer
 from fypy.model.levy.BlackScholes import *
+from fypy.termstructures.EquityForward import EquityForward
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.pricing.analytical.black_scholes import black76_price
 
@@ -17,7 +18,7 @@ class Test_GilPeleaz_European(unittest.TestCase):
         disc_curve = DiscountCurve_ConstRate(rate=r)
         div_disc = DiscountCurve_ConstRate(rate=q)
         fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
-        model = BlackScholes(sigma=sigma, forwardCurve=fwd)
+        model = BlackScholes(sigma=sigma, forwardCurve=fwd, discountCurve=disc_curve)
         pricer = GilPeleazEuropeanPricer(model=model, limit=1000)
 
         for is_call in [True, False]:

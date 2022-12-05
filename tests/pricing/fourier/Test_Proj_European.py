@@ -8,7 +8,7 @@ from fypy.model.levy.CGMY import CMGY
 from fypy.model.levy.MertonJD import MertonJD
 from fypy.model.levy.KouJD import KouJD
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
-from fypy.pricing.analytical.black_scholes import black76_price
+from fypy.termstructures.EquityForward import EquityForward
 from fypy.pricing.analytical.black_scholes import black76_price, black76_price_strikes
 
 
@@ -23,7 +23,7 @@ class Test_Proj_European(unittest.TestCase):
         disc_curve = DiscountCurve_ConstRate(rate=r)
         div_disc = DiscountCurve_ConstRate(rate=q)
         fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
-        model = BlackScholes(sigma=sigma, forwardCurve=fwd)
+        model = BlackScholes(sigma=sigma, forwardCurve=fwd, discountCurve=disc_curve)
         pricer = ProjEuropeanPricer(model=model, N=2 ** 10)
 
         # Sanity Check the term structures
@@ -55,7 +55,7 @@ class Test_Proj_European(unittest.TestCase):
         fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 
         # 1) Black Scholes
-        model = BlackScholes(sigma=0.15, forwardCurve=fwd)
+        model = BlackScholes(sigma=0.15, forwardCurve=fwd, discountCurve=disc_curve)
         pricer = ProjEuropeanPricer(model=model, N=2 ** 14, L=12)
         price = pricer.price(T=T, K=S0, is_call=True)
 

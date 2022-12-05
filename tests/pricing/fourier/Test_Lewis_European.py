@@ -4,6 +4,7 @@ from fypy.model.levy.MertonJD import MertonJD
 from fypy.pricing.fourier.LewisEuropeanPricer import LewisEuropeanPricer
 from fypy.model.levy.BlackScholes import *
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
+from fypy.termstructures.EquityForward import EquityForward
 from fypy.pricing.analytical.black_scholes import black76_price
 
 
@@ -18,7 +19,7 @@ class Test_Lewis_European(unittest.TestCase):
         disc_curve = DiscountCurve_ConstRate(rate=r)
         div_disc = DiscountCurve_ConstRate(rate=q)
         fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
-        model = BlackScholes(sigma=sigma, forwardCurve=fwd)
+        model = BlackScholes(sigma=sigma, forwardCurve=fwd, discountCurve=disc_curve)
         pricer = LewisEuropeanPricer(model=model, N=2 ** 8)
 
         for is_call in [True, False]:
