@@ -71,7 +71,7 @@ class ImpliedVolCalculator_Black76(ImpliedVolCalculator):
                   is_call: bool,
                   ttm: float) -> float:
         """ Note: the underlying is forward for Black76 """
-        return self._imply_vol(price=p, strike=strike, is_call=is_call, ttm=ttm,
+        return self._imply_vol(price=price, strike=strike, is_call=is_call, ttm=ttm,
                                disc=self._disc_curve(ttm),
                                fwd=self._fwd_curve(ttm))
 
@@ -119,22 +119,3 @@ class ImpliedVolCalculator_Black76(ImpliedVolCalculator):
                    ):
         cp = 1 if is_call else -1
         return implied_volatility_from_a_transformed_rational_guess(price / disc, fwd, strike, ttm, cp)
-
-
-if __name__ == '__main__':
-    from fypy.termstructures.EquityForward import EquityForward
-    from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
-
-    spot = 100
-    disc_curve = DiscountCurve_ConstRate(rate=0.0)
-    fwd_curve = EquityForward(S0=spot, discount=disc_curve)
-    ivc = ImpliedVolCalculator_Black76(fwd_curve=fwd_curve, disc_curve=disc_curve)
-
-    p = 0.05
-    K_ = 100
-    T = 0.5
-    v = ivc.imply_vol(price=p, strike=K_, ttm=T, is_call=True)
-    p2 = black76_price(fwd_curve(T), K_, True, v, disc_curve(T), T)
-
-    diff = p2 - p
-    print(diff)
