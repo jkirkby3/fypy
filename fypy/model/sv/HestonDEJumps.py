@@ -86,8 +86,10 @@ class HestonDEJumps(_HestonJumpsBase):
         """
         lam, p_up, eta1, eta2 = self.lam, self.p_up, self.eta1, self.eta2
 
+        w = - lam * (p_up * eta1 / (eta1 - 1) + (1 - p_up) * eta2 / (eta2 + 1) - 1)  # convexity correction
+
         temp2 = lam * ((1 - p_up) * eta2 / (eta2 + 1j * xi) + p_up * eta1 / (eta1 - 1j * xi) - 1)
-        return np.exp(T * temp2)
+        return np.exp(T * (temp2 + 1j * xi * w))
 
     # =============================
     # Calibration Interface Implementation

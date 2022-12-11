@@ -63,6 +63,10 @@ class MarketSurface(object):
         """ Return the forward curve, if it exists. """
         return self._forward_curve
 
+    @forward_curve.setter
+    def forward_curve(self, fwd_curve: ForwardCurve):
+        self._forward_curve = fwd_curve
+
     @property
     def eq_forward_curve(self) -> Optional[EquityForward]:
         """ If there is a forward curve, and it is an equity forward curve, return it. Otherwise, return None. """
@@ -76,9 +80,13 @@ class MarketSurface(object):
         return self._forward_curve(0.) if self._forward_curve else None
 
     @property
-    def discount_curve(self):
+    def discount_curve(self) -> DiscountCurve:
         """ Return the discount curve, if it exists. """
         return self._discount_curve
+
+    @discount_curve.setter
+    def discount_curve(self, discount_curve: DiscountCurve):
+        self._discount_curve = discount_curve
 
     @property
     def ttms(self):

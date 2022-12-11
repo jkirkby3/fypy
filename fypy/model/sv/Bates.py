@@ -157,7 +157,8 @@ class Bates(_HestonJumpsBase):
         :return: np.ndarray or float, characteristic function evaluated at input points in frequency domain
         """
         sigj2 = .5 * self.sigj ** 2
-        return np.exp(T * self.lam * (np.exp(1j * xi * self.muj - sigj2 * xi ** 2) - 1))
+        w_jump = - self.lam * (np.exp(self.muj + sigj2) - 1)
+        return np.exp(T * (1j * xi * w_jump + self.lam * (np.exp(1j * xi * self.muj - sigj2 * xi ** 2) - 1)))
 
     # =============================
     # Calibration Interface Implementation
