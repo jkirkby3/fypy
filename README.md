@@ -35,7 +35,7 @@ https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
 
 ## User installation
 
-Coming soon, for now use git clone.
+pip install git+https://github.com/jkirkby3/fypy.git
 
 ## Dependencies
 
