@@ -95,7 +95,7 @@ class ProjEuropeanPricer(StrikesPricer):
             if is_calls[i]:  # price using put-call parity
                 price += (fwd - K[i]) * disc
 
-            output[i] = price
+            output[i] = max(0, price)
 
     def _get_nbar(self, a: float, lws: float, lam: float) -> int:
         nbar = int(np.floor(a * (lws - lam) + 1))
@@ -208,9 +208,10 @@ class CubicImpl(Impl):
         b3 = 1 / 2520
 
         a = self.a
-        w = self.w
+        w = self.w[1:]
+        grand = np.empty_like(self.w, dtype=complex)
 
-        grand = self.model.chf(T=self.T, xi=w) \
+        grand[1:] = self.model.chf(T=self.T, xi=w) \
                 * (np.sin(w / (2 * a)) / w) ** 4 \
                 / (b0 + b1 * np.cos(w / a) + b2 * np.cos(2 * w / a) + b3 * np.cos(3 * w / a))
 
