@@ -58,7 +58,7 @@ class ProjEuropeanPricer(StrikesPricer):
             if np.isnan(self._alpha_override) else self._alpha_override
 
         # Ensure that grid is wide enough to cover the strike
-        alph = max(alph, 1.05 * max(np.abs(lws_vec)))
+        alph = max(alph, 1.05 * max(np.abs(lws_vec)) + cumulants.c1)
 
         dx = 2 * alph / (self._N - 1)
         a = 1. / dx
@@ -67,9 +67,8 @@ class ProjEuropeanPricer(StrikesPricer):
         # ==============
         # Cubic Basis
         # ==============
-        max_K = np.max(K)
-        lws = np.log(max_K / S0)
-        max_n_bar = self._get_nbar(a=a, lws=lws, lam=lam)
+        max_lws = np.log(np.max(K) / S0)
+        max_n_bar = self._get_nbar(a=a, lws=max_lws, lam=lam)
 
         impl = CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar) if self._order == 3 \
             else HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
