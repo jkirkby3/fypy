@@ -72,6 +72,7 @@ class YahooFinanceLoader(object):
 
         # Filter the data
         df = df[df['volume'] >= volume_filter]
+        df.dropna(how='any', subset=['bid', 'ask'], inplace=True)
 
         df['ticker'] = ticker
         return df
