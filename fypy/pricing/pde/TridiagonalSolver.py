@@ -16,8 +16,8 @@ def solve_dirichlet(a: np.array,
 
     """
     if not (len(a) == len(b) == len(c) == len(s)):
-        raise RuntimeError(f"The lengths of arrays a, b, c, and s must be equal, "
-                           f"they are {len(a)}, {len(b)}, {len(c)}, and {len(s)}")
+        raise ValueError(f"The lengths of arrays a, b, c, and s must be equal, "
+                         f"they are {len(a)}, {len(b)}, {len(c)}, and {len(s)}")
 
     x = np.zeros(shape=len(a))
     y = np.zeros(shape=len(a))

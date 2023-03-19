@@ -5,6 +5,7 @@ import numpy as np
 from fypy.pricing.pde.TridiagonalSolver import solve_dirichlet
 
 
+# noinspection DuplicatedCode
 class Test_TridiagonalSolver(unittest.TestCase):
     def test_homogeneous(self):
         a = np.ones(shape=10)
