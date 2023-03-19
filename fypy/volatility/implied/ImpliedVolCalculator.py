@@ -8,7 +8,7 @@ from fypy.pricing.analytical.black_scholes import *
 
 
 class ImpliedVolCalculator(ABC):
-    """ Base class for implied volatiliy calculators on standard options """
+    """ Base class for implied volatility calculators on standard options """
 
     @abstractmethod
     def imply_vol(self,
