@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from fypy.pricing.pde.TridiagonalSolver import solve_dirichlet
+from fypy.pricing.pde.utility.TridiagonalSolver import solve_dirichlet
 
 
 # noinspection DuplicatedCode

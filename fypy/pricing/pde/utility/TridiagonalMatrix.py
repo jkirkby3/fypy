@@ -19,6 +19,8 @@ class TridiagonalMatrix:
                       ...  d_{N-1}  u_{N-1} |    v_{N-1}  =
                       ...  l_{N-1}  d_N     |    v_N      = l_{N-1} v_{N-1} + d_N v_N   + 0
         """
+        if len(vector) != len(self):
+            raise ValueError(f"sizes of vector ({len(vector)}) and matrix ({len(self)}) do not match")
 
         # A_i = l_i * v_i
         A = self._lower * vector[:-1]
@@ -30,3 +32,24 @@ class TridiagonalMatrix:
         B[1:] += A
         B[:-1] += C
         return B
+
+    @property
+    def lower(self) -> np.array:
+        return self._lower
+
+    @property
+    def diag(self) -> np.array:
+        return self._diag
+
+    @property
+    def upper(self) -> np.array:
+        return self._upper
+
+    @staticmethod
+    def create_matrix(N: int):
+        if N < 3:
+            raise ValueError(f"cannot create TridiagonalMatrix with size < 3")
+        return TridiagonalMatrix(lower=np.zeros(shape=N - 1), diag=np.zeros(shape=N), upper=np.zeros(shape=N - 1))
+
+    def __len__(self) -> int:
+        return len(self._diag)

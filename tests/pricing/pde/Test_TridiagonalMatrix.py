@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from fypy.pricing.pde.TridiagonalMatrix import TridiagonalMatrix
+from fypy.pricing.pde.utility.TridiagonalMatrix import TridiagonalMatrix
 
 
 class Test_TridiagonalMatrix(unittest.TestCase):
@@ -11,6 +11,8 @@ class Test_TridiagonalMatrix(unittest.TestCase):
         lower = np.zeros(shape=4)
 
         Id = TridiagonalMatrix(upper=upper, diag=diag, lower=lower)
+        self.assertEqual(len(Id), 5)
+
         vec = np.array([1.1, 2.3, 8.5, 3.6, 4.9])
 
         out = Id * vec
@@ -24,6 +26,8 @@ class Test_TridiagonalMatrix(unittest.TestCase):
         lower = np.ones(shape=4)
 
         M = TridiagonalMatrix(upper=upper, diag=diag, lower=lower)
+        self.assertEqual(len(M), 5)
+
         vec = np.ones(shape=5)
 
         out = M * vec
