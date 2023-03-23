@@ -1,6 +1,7 @@
 from fypy.fit.Calibratable import Calibratable
 from fypy.fit.Minimizer import Minimizer, LeastSquares, OptResult
 from fypy.fit.Objective import Objective
+from fypy.fit.Loss import Loss
 from typing import Dict, Union, List, Tuple, Optional
 import numpy as np
 
@@ -8,7 +9,8 @@ import numpy as np
 class Calibrator(object):
     def __init__(self,
                  model: Calibratable,
-                 minimizer: Minimizer = LeastSquares()):
+                 minimizer: Minimizer = LeastSquares(),
+                 loss: Optional[Loss] = None):
         """
         A generic calibration engine. The idea is to supply a minimizer of some kind (least squares), as well
         as a calibratable object of some kind, e.g. a full model or a component of the model, and to calibrate
@@ -24,10 +26,13 @@ class Calibrator(object):
         self._minimizer = minimizer
 
         self._objectives: Dict[str, Objective] = {}
+        self._loss = loss
 
         # Initialize the guess and bounds, using model defaults. These can be overridden
         self._guess: Optional[np.ndarray] = model.default_params()
         self._bounds: Union[Tuple, List[Tuple]] = model.param_bounds()
+
+        self._constraints: Dict[str, object] = {}
 
     def add_objective(self,
                       name: str,
@@ -42,6 +47,9 @@ class Calibrator(object):
         """
         self._objectives[name] = objective
         return self
+
+    def add_constraint(self, name: str, constraint):
+        self._constraints[name] = constraint
 
     def set_bounds(self, bounds: Union[Tuple, List[Tuple]]):
         """
@@ -66,8 +74,11 @@ class Calibrator(object):
         if len(self._objectives) == 0:
             raise RuntimeError("You never set any objectives ")
 
-        result = self._minimizer.minimize(self._objective_value,
-                                          bounds=self._bounds, guess=self._guess)
+        result = self._minimizer.minimize(self._objective_value if self._loss else self._objective_vector,
+                                          bounds=self._bounds,
+                                          guess=self._guess,
+                                          constraints=self._constraints.values())
+
         # Set the final parameters in the model
         self._model.set_params(result.params)
         return result
@@ -76,12 +87,18 @@ class Calibrator(object):
     # Private
     # ========================
 
-    def _objective_value(self, params: np.ndarray) -> np.ndarray:
-        if len(self._objectives) == 0:
-            raise RuntimeError("You never set any objectives ")
-
+    def _objective_vector(self, params: np.ndarray) -> np.ndarray:
         # Set the parameters into model
         self._model.set_params(params)
 
         # Evaluate the residuals for all objectives
         return np.concatenate([objective.value() for _, objective in self._objectives.items()])
+
+    def _objective_value(self, params: np.ndarray) -> float:
+        # Set the parameters into model
+        self._model.set_params(params)
+
+        # Evaluate the residuals for all
+        val = self._loss.agg_apply([self._loss.residual_apply(objective.value())
+                                    for _, objective in self._objectives.items() if objective.strength > 0])
+        return val

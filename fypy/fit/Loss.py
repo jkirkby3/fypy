@@ -27,3 +27,11 @@ class LossL2(Loss):
     def agg_apply(self, s):
         return np.sqrt(s)
 
+
+class SumLoss(Loss):
+    """ Sum(x_i) """
+    def residual_apply(self, x):
+        return x
+
+    def agg_apply(self, s):
+        return np.sum(s)

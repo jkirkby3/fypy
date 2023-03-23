@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from typing import Union, List, Tuple, Callable
-from scipy.optimize import least_squares
+from typing import Union, List, Tuple, Callable, Optional
+from scipy.optimize import least_squares, minimize
 
 
 class OptResult(object):
@@ -33,7 +33,8 @@ class Minimizer(ABC):
     def minimize(self,
                  function: Callable,
                  bounds: Union[Tuple, List[Tuple]] = None,
-                 guess: np.ndarray = None) -> OptResult:
+                 guess: np.ndarray = None,
+                 constraints=()) -> OptResult:
         """
         Minimize the objectives to obtain optimal params. Main function to override
         :param function: Callable, the objective function to minimizer
@@ -103,7 +104,8 @@ class LeastSquares(Minimizer):
     def minimize(self,
                  function: Callable,
                  bounds: Union[Tuple, List[Tuple]] = None,
-                 guess: np.ndarray = None) -> OptResult:
+                 guess: np.ndarray = None,
+                 constraints=()) -> OptResult:
         """
         Minimize the objectives to obtain optimal params.
         :param function: Callable, the objective function to minimizer
@@ -112,6 +114,9 @@ class LeastSquares(Minimizer):
         :param guess: np.ndarray, initial guess of parameters
         :return: OptResult, the result of optimization
         """
+        if constraints:
+            raise NotImplementedError("Least Squares currently doesnt support constraints")
+
         if isinstance(bounds, List):
             # Convert into least_squares library convention
             bounds = ([b[0] for b in bounds], [b[1] for b in bounds])
@@ -129,3 +134,25 @@ class LeastSquares(Minimizer):
 
         return OptResult(params=fit.x, value=fit.fun, success=fit.success,
                          message=fit.message)
+
+
+class ScipyMinimizer(Minimizer):
+    def __init__(self,
+                 method: str,
+                 tol: Optional[float] = None,
+                 options: dict = None):
+        self._method = method
+        self._tol = tol
+        self._options = options
+
+    def minimize(self,
+                 function: Callable,
+                 bounds: Union[Tuple, List[Tuple]] = None,
+                 guess: np.ndarray = None,
+                 constraints=()) -> OptResult:
+        """"""
+        fit = minimize(fun=function, x0=guess, method=self._method,
+                       bounds=bounds, constraints=constraints,
+                       options=self._options, tol=self._tol)
+
+        return OptResult(params=fit.x, value=fit.fun, success=fit.success, message=fit.message)
