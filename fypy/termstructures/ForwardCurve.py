@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, Callable, List
+from fypy.termstructures.Interpolation import LogLinearInterpolation, interp1d
 import numpy as np
 
 
@@ -13,10 +14,9 @@ class ForwardCurve(ABC):
         Commodity: F(T) = Futures(T), ie. some interpolation of the futures curve
     """
 
-    @abstractmethod
     def spot(self) -> float:
         """ Spot price. In some cases this is the actual spot (e.g. Equity/FX), otherwise it is F(0) """
-        raise NotImplementedError
+        return self.fwd_T(0)
 
     @abstractmethod
     def fwd_T(self, T: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
@@ -44,3 +44,58 @@ class ForwardCurve(ABC):
         """
         T = max(T, t + 1e-09)
         return np.log(self.fwd_T(T) / self.fwd_T(t)) / (T - t)
+
+
+class FlatForwardCurve(ForwardCurve):
+    def __init__(self,
+                 F0: float):
+        """
+        Flat Forward curve class, which always returns a constant value
+        """
+        self._F0 = F0
+
+    def spot(self) -> float:
+        return self._F0
+
+    def fwd_T(self, T: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        return self._F0
+
+
+class InterpolatedForwardCurve(ForwardCurve):
+    def __init__(self,
+                 interp: Callable):
+        """
+        Interpolated Forward curve class
+        :param interp: an interpolation of x and y values, representing times and forwards
+        """
+        self._interp = interp
+
+    def fwd_T(self, T: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        return self._interp(T)
+
+    @classmethod
+    def from_linear(cls,
+                    ttms: Union[np.ndarray, List],
+                    forwards: Union[np.ndarray, List]) -> 'ForwardCurve':
+        """
+        Convenience method to construct a linearly interpolated forward curve
+        :param ttms: array-like, the x-points, correspond to tenors (times to maturity)
+        :param forwards: array-like, the y-points, correspond to forwards
+        :return: ForwardCurve, interpolation of points and values
+        """
+        interp = interp1d(ttms, forwards, fill_value='extrapolate', bounds_error=False)
+        return cls(interp=interp)
+
+    @classmethod
+    def from_log_linear(cls,
+                        ttms: Union[np.ndarray, List],
+                        forwards: Union[np.ndarray, List]) -> 'ForwardCurve':
+        """
+        Convenience method to construct a log-linearly interpolated forward curve.
+        Note: this assumes that all forwards are positive
+        :param ttms: array-like, the x-points, correspond to tenors (times to maturity)
+        :param forwards: array-like, the y-points, correspond to forwards
+        :return: FowardCurve, interpolation of points and values
+        """
+        interp = LogLinearInterpolation(points=ttms, values=forwards)
+        return cls(interp=interp)
