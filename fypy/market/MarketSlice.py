@@ -162,10 +162,15 @@ class MarketSlice(object):
         ask_prices = []
         is_calls = []
 
+        bid_vols = []
+        mid_vols = []
+        ask_vols = []
+
         for i in range(len(self.strikes)):
             strike = MarketSlice.SliceStrike(index=i, market_slice=self)
             if strike_filter.keep_strike(strike):
                 strikes.append(self.strikes[i])
+
                 if self.bid_prices is not None:
                     bid_prices.append(self.bid_prices[i])
 
@@ -174,6 +179,15 @@ class MarketSlice(object):
 
                 if self.ask_prices is not None:
                     ask_prices.append(self.ask_prices[i])
+
+                if self.bid_vols is not None:
+                    bid_vols.append(self.bid_vols[i])
+
+                if self.mid_vols is not None:
+                    mid_vols.append(self.mid_vols[i])
+
+                if self.ask_vols is not None:
+                    ask_vols.append(self.ask_vols[i])
 
                 is_calls.append(self.is_calls[i])
 
@@ -185,6 +199,9 @@ class MarketSlice(object):
                                 mid_prices=np.asarray(mid_prices),
                                 ask_prices=np.asarray(ask_prices),
                                 is_calls=np.asarray(is_calls, dtype=int))
+        new_slice.set_vols(bid_vols=np.asarray(bid_vols) if bid_vols else None,
+                           mid_vols=np.asarray(mid_vols) if mid_vols else None,
+                           ask_vols=np.asarray(ask_vols) if ask_vols else None)
 
         return new_slice
 

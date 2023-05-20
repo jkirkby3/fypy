@@ -58,7 +58,7 @@ class ProjEuropeanPricer(StrikesPricer):
             if np.isnan(self._alpha_override) else self._alpha_override
 
         # Ensure that grid is wide enough to cover the strike
-        alph = max(alph, 1.05 * max(np.abs(lws_vec)) + cumulants.c1)
+        alph = max(alph, 1.15 * max(np.abs(lws_vec)) + cumulants.c1)
 
         dx = 2 * alph / (self._N - 1)
         a = 1. / dx
@@ -97,9 +97,12 @@ class ProjEuropeanPricer(StrikesPricer):
             output[i] = max(0, price)
 
     def _get_nbar(self, a: float, lws: float, lam: float) -> int:
-        nbar = int(np.floor(a * (lws - lam) + 1))
-        if nbar >= self._N:
-            nbar = self._N - 1
+        try:
+            nbar = int(np.floor(a * (lws - lam) + 1))
+            if nbar >= self._N:
+                nbar = self._N - 1
+        except Exception as e:
+            raise e
         return nbar
 
 

@@ -14,6 +14,11 @@ class SliceFilter(ABC):
         raise NotImplementedError
 
 
+class NeverFilterSlice(SliceFilter):
+    def keep(self, market_slice: MarketSlice) -> bool:
+        return True
+
+
 class SliceFilters(SliceFilter):
     def __init__(self, filters: Optional[List[SliceFilter]] = None):
         self._filters = filters or []
@@ -109,7 +114,7 @@ class MarketSurface(object):
             slice_.fill_implied_vols(calculator)
 
     def filter_slices(self,
-                      slice_filter: SliceFilter,
+                      slice_filter: SliceFilter = NeverFilterSlice(),
                       strike_filter: Optional[StrikeFilter] = None) -> 'MarketSurface':
         filtered_surface = MarketSurface(forward_curve=self._forward_curve,
                                          discount_curve=self._discount_curve)
