@@ -1,8 +1,10 @@
-from fypy.pricing.StrikesPricer import StrikesPricer
-from fypy.model.levy.LevyModel import FourierModel
+from abc import ABC, abstractmethod
+
 import numpy as np
 from scipy.fft import fft
-from abc import ABC, abstractmethod
+
+from fypy.model.levy.LevyModel import FourierModel
+from fypy.pricing.StrikesPricer import StrikesPricer
 
 
 class ProjEuropeanPricer(StrikesPricer):
@@ -23,7 +25,7 @@ class ProjEuropeanPricer(StrikesPricer):
             L = 6 is fine, for heavy tailed processes such as CGMY, may want a larger value to get very high accuracy
         :param order: int, the Spline order: 0 = Haar, 1 = Linear, 2 = Quadratic, 3 = Cubic
             Note: Cubic is preferred, the others are provided for research purposes. Only 1 and 3 are currently coded
-        :param alpha_override: float, if supplied, this ovverrides the rule using L to determine the gridwidth,
+        :param alpha_override: float, if supplied, this overrides the rule using L to determine the gridwidth,
             allows you to use your own rule to set grid if desired
         """
         self._model = model
@@ -31,10 +33,10 @@ class ProjEuropeanPricer(StrikesPricer):
         self._N = N
         self._L = L
         self._alpha_override = alpha_override
-        self._efficient_multi_strike= [1]
+        self._efficient_multi_strike = [1]
 
         if order not in (0, 1, 3):
-            raise NotImplementedError("Only cubic and Haar implemented so far")
+            raise NotImplementedError("Only cubic, linear and Haar implemented so far")
 
     def price_strikes_fill(self,
                            T: float,
@@ -68,12 +70,11 @@ class ProjEuropeanPricer(StrikesPricer):
         max_lws = np.log(np.max(K) / S0)
         max_n_bar = self._get_nbar(a=a, lws=max_lws, lam=lam)
 
+        if self._order == 0:
+            impl = HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
 
-        if self._order==0:
-            impl= HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
-
-        elif self._order==1:
-            impl= LinearImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+        elif self._order == 1:
+            impl = LinearImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
 
         else:
             impl = CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
@@ -85,7 +86,6 @@ class ProjEuropeanPricer(StrikesPricer):
         # ==============
         # Price Strikes
         # ==============
-
 
         def price_aligned_grid(index, strike):
             lws = lws_vec[index]
@@ -109,7 +109,7 @@ class ProjEuropeanPricer(StrikesPricer):
             rho = lws_vec[index] - (xmin + (closest_nbar - 1) * dx)
 
             coeffs = impl.coefficients(nbar=closest_nbar, W=strike, S0=S0, xmin=xmin, rho=rho,
-                                                    misaligned_grid=True)
+                                       misaligned_grid=True)
 
             # price the put
             price = cons3 * np.dot(beta[:len(coeffs)], coeffs)
@@ -118,10 +118,9 @@ class ProjEuropeanPricer(StrikesPricer):
 
             output[index] = max(0, price)
 
-
         # Prices computation
 
-        if len(K)>1 and self._order in self._efficient_multi_strike:
+        if len(K) > 1 and self._order in self._efficient_multi_strike:
             xmin = max_lws - (max_n_bar - 1) * dx
             beta = np.real(fft(impl.integrand(xmin=xmin)))
             price_vectorized = np.vectorize(price_misaligned_grid)
@@ -130,9 +129,7 @@ class ProjEuropeanPricer(StrikesPricer):
 
         else:
             price_vectorized = np.vectorize(price_aligned_grid)
-            price_vectorized(np.arange(0,len(K)),K)
-
-
+            price_vectorized(np.arange(0, len(K)), K)
 
     def _get_nbar(self, a: float, lws: float, lam: float) -> int:
         try:
@@ -255,11 +252,12 @@ class CubicImpl(Impl):
         grand = np.empty_like(self.w, dtype=complex)
 
         grand[1:] = self.model.chf(T=self.T, xi=w) \
-                * (np.sin(w / (2 * a)) / w) ** 4 \
-                / (b0 + b1 * np.cos(w / a) + b2 * np.cos(2 * w / a) + b3 * np.cos(3 * w / a))
+                    * (np.sin(w / (2 * a)) / w) ** 4 \
+                    / (b0 + b1 * np.cos(w / a) + b2 * np.cos(2 * w / a) + b3 * np.cos(3 * w / a))
 
         grand[0] = 1 / self.cons()
         return grand
+
 
 class LinearImpl(Impl):
     def __init__(self,
@@ -312,12 +310,10 @@ class LinearImpl(Impl):
     def coefficients(self,
                      nbar: int, W: float, S0: float, xmin: float, rho: float = 0,
                      misaligned_grid: bool = False) -> np.ndarray:
-
         self.G[nbar - 1] = W * self.g1
         self.G[: nbar - 1] = W - S0 * np.exp(xmin) * self._expos[:nbar - 1] * self.g2
 
         if misaligned_grid == True:
-
             dx = self.dx
             zeta = self.a * rho
 
@@ -329,7 +325,6 @@ class LinearImpl(Impl):
 
             rhoPlus = rho * qPlus
             rhoMinus = rho * qMinus
-
 
             # theta computation
 
@@ -362,11 +357,10 @@ class LinearImpl(Impl):
 
             self.G[nbar] = W * (delta_bar_P1 - np.exp(-rho) * np.exp(dx) * deltaP1)
 
-            self.G[nbar - 1] +=  W * (delta_bar_0 - np.exp(-rho) * (theta0 + delta0) + theta0 )
-
-
+            self.G[nbar - 1] += W * (delta_bar_0 - np.exp(-rho) * (theta0 + delta0) + theta0)
 
         return self.G
+
 
 class HaarImpl(Impl):
 
