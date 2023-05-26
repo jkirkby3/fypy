@@ -31,8 +31,9 @@ class ProjEuropeanPricer(StrikesPricer):
         self._N = N
         self._L = L
         self._alpha_override = alpha_override
+        self._efficient_multi_strike= [1]
 
-        if order not in (0, 3):
+        if order not in (0, 1, 3):
             raise NotImplementedError("Only cubic and Haar implemented so far")
 
     def price_strikes_fill(self,
@@ -64,14 +65,18 @@ class ProjEuropeanPricer(StrikesPricer):
         a = 1. / dx
         lam = cumulants.c1 - (self._N / 2 - 1) * dx
 
-        # ==============
-        # Cubic Basis
-        # ==============
         max_lws = np.log(np.max(K) / S0)
         max_n_bar = self._get_nbar(a=a, lws=max_lws, lam=lam)
 
-        impl = CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar) if self._order == 3 \
-            else HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+
+        if self._order==0:
+            impl= HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+
+        elif self._order==1:
+            impl= LinearImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+
+        else:
+            impl = CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
 
         disc = self._model.discountCurve(T)
         fwd = self._model.forwardCurve(T)
@@ -81,20 +86,53 @@ class ProjEuropeanPricer(StrikesPricer):
         # Price Strikes
         # ==============
 
-        for i in range(len(K)):
-            lws = lws_vec[i]
+
+        def price_aligned_grid(index, strike):
+            lws = lws_vec[index]
             nbar = self._get_nbar(a=a, lws=lws, lam=lam)
             xmin = lws - (nbar - 1) * dx
 
             beta = np.real(fft(impl.integrand(xmin=xmin)))
-            coeffs = impl.coefficients(nbar=nbar, W=K[i], S0=S0, xmin=xmin)
+            coeffs = impl.coefficients(nbar=nbar, W=strike, S0=S0, xmin=xmin)
 
             # price the put
             price = cons3 * np.dot(beta[:len(coeffs)], coeffs)
-            if is_calls[i]:  # price using put-call parity
-                price += (fwd - K[i]) * disc
+            if is_calls[index]:  # price using put-call parity
+                price += (fwd - strike) * disc
 
-            output[i] = max(0, price)
+            output[index] = max(0, price)
+
+        # Prices method adapted to multi-strike
+        # with Quadrature Adjustment for Grid Misalignment
+        def price_misaligned_grid(index, strike):
+            closest_nbar = self._get_nbar(a=a, lws=lws_vec[index], lam=xmin)
+            rho = lws_vec[index] - (xmin + (closest_nbar - 1) * dx)
+
+            coeffs = impl.coefficients(nbar=closest_nbar, W=strike, S0=S0, xmin=xmin, rho=rho,
+                                                    misaligned_grid=True)
+
+            # price the put
+            price = cons3 * np.dot(beta[:len(coeffs)], coeffs)
+            if is_calls[index]:  # price using put-call parity
+                price += (fwd - strike) * disc
+
+            output[index] = max(0, price)
+
+
+        # Prices computation
+
+        if len(K)>1 and self._order in self._efficient_multi_strike:
+            xmin = max_lws - (max_n_bar - 1) * dx
+            beta = np.real(fft(impl.integrand(xmin=xmin)))
+            price_vectorized = np.vectorize(price_misaligned_grid)
+            price_vectorized(np.arange(0, len(K)), K)
+
+
+        else:
+            price_vectorized = np.vectorize(price_aligned_grid)
+            price_vectorized(np.arange(0,len(K)),K)
+
+
 
     def _get_nbar(self, a: float, lws: float, lam: float) -> int:
         try:
@@ -147,6 +185,9 @@ class Impl(ABC):
         raise NotImplementedError
 
 
+# ==============
+# Cubic Basis
+# ==============
 class CubicImpl(Impl):
     def __init__(self,
                  N: int,
@@ -220,6 +261,112 @@ class CubicImpl(Impl):
         grand[0] = 1 / self.cons()
         return grand
 
+class LinearImpl(Impl):
+    def __init__(self,
+                 N: int,
+                 dx: float,
+                 model: FourierModel,
+                 T,
+                 max_n_bar: int):
+        super(LinearImpl, self).__init__(N=N, dx=dx, model=model, T=T, max_n_bar=max_n_bar)
+        self._init_consts()
+
+        # precompute components of the fourier integrand that don't depend on strike
+        self._base_integrand = self._init_base_integrand()
+
+        # Precompute the exponentials needed to evaluate payoff
+        self._expos = np.exp(self.dx * np.arange(0, max_n_bar - 1))
+
+    def cons(self):
+        return 24 * self.a ** 2
+
+    def num_coeffs(self, nbar: int) -> int:
+        return nbar + 1
+
+    def _init_base_integrand(self) -> np.ndarray:
+        a = self.a
+        w = self.w[1:]
+        grand = np.empty_like(self.w, dtype=complex)
+
+        grand[1:] = (self.model.chf(T=self.T, xi=w) * (((np.sin(w / (2 * a))) / w) ** 2)) / (2 + np.cos(w / a))
+
+        grand[0] = 1 / self.cons()
+        return grand
+
+    def integrand(self, xmin: float) -> np.ndarray:
+        return self._base_integrand * np.exp(-1j * xmin * self.w)
+
+    def _init_consts(self):
+        dx = self.dx
+        self.g1 = 0.5 - (1 / 15) * (
+                7 / 6
+                + 4 / 3 * np.exp(-3 / 4 * dx)
+                + np.exp(-0.5 * dx)
+                + 4 * np.exp(-0.25 * dx)
+        )
+
+        self.g2 = (
+                          7 / 3 + 8 / 3 * np.cosh(3 / 4 * dx) + 2 * np.cosh(0.5 * dx) + 8 * np.cosh(0.25 * dx)
+                  ) / 15
+
+    def coefficients(self,
+                     nbar: int, W: float, S0: float, xmin: float, rho: float = 0,
+                     misaligned_grid: bool = False) -> np.ndarray:
+
+        self.G[nbar - 1] = W * self.g1
+        self.G[: nbar - 1] = W - S0 * np.exp(xmin) * self._expos[:nbar - 1] * self.g2
+
+        if misaligned_grid == True:
+
+            dx = self.dx
+            zeta = self.a * rho
+
+            qPlus = 0.5 * (1 + np.sqrt(3 / 5))
+            qMinus = 0.5 * (1 - np.sqrt(3 / 5))
+
+            zetaPlus = zeta * qPlus
+            zetaMinus = zeta * qMinus
+
+            rhoPlus = rho * qPlus
+            rhoMinus = rho * qMinus
+
+
+            # theta computation
+
+            theta0 = (1 / 15) * (
+                    7 / 6
+                    + 4 / 3 * np.exp(-3 / 4 * dx)
+                    + np.exp(-0.5 * dx)
+                    + 4 * np.exp(-0.25 * dx)
+            )
+
+            # delta bar computation
+
+            delta_bar_0 = zeta * (1 - 0.5 * zeta)
+
+            delta_bar_P1 = zeta - delta_bar_0
+
+            # delta computation
+
+            delta0 = (zeta / 18) \
+                     * (4 * (2 - zeta) * np.exp(rho / 2) \
+                        + 5 \
+                        * ((1 - zetaMinus) * np.exp(rhoMinus) + (1 - zetaPlus) * np.exp(rhoPlus))
+                        )
+
+            deltaP1 = (zeta / 18) * np.exp(-dx) \
+                      * (
+                              4 * zeta * np.exp(0.5 * rho) + 5 * (
+                              zetaMinus * np.exp(rhoMinus) + zetaPlus * np.exp(rhoPlus))
+                      )
+
+            self.G[nbar] = W * (delta_bar_P1 - np.exp(-rho) * np.exp(dx) * deltaP1)
+
+            self.G[nbar - 1] +=  W * (delta_bar_0 - np.exp(-rho) * (theta0 + delta0) + theta0 )
+
+
+
+        return self.G
 
 class HaarImpl(Impl):
 
