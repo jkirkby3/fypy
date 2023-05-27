@@ -10,15 +10,17 @@ class LewisEuropeanPricer(StrikesPricer):
     def __init__(self,
                  model: FourierModel,
                  N: int = 2 ** 12,
-                 interp: str = 'cubic'):
+                 interp: str = 'cubic',
+                 limit: int = 200):
         """
         Price European options using Fourier method of Lewis (2001)
         :param model: Fourier model
         :param N: int (power of 2), number of quadrature points in integral calculation
         :param interp: str, 'cubic' or 'linear'
+        :param limit: int, upper bound on number of quad subintervals
         """
         self._model = model
-        self._limit = 200  # upper bound on number of quad subintervals
+        self._limit = limit
         self._N = N
         self._interp = interp
 
