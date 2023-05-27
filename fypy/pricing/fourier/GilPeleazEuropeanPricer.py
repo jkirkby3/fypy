@@ -8,14 +8,14 @@ from scipy.integrate import quad
 class GilPeleazEuropeanPricer(StrikesPricer):
     def __init__(self,
                  model: FourierModel,
-                 limit: float = 1000.):
+                 limit: int = 1000):
         """
         Gil-Peleaz method for Pricing European options under a Fourier model (i.e. using ChF)
         :param model: FourierModel, model to price under
         :param limit: float, integration limit for Fourier integrals
         """
         self._model = model
-        self._limit = limit  # integration limit for Fourier integrals
+        self._limit = int(limit)  # integration limit for Fourier integrals
 
     def price(self, T: float, K: float, is_call: bool):
         """
