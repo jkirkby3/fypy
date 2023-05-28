@@ -125,8 +125,6 @@ class ProjEuropeanPricer(StrikesPricer):
             beta = np.real(fft(impl.integrand(xmin=xmin)))
             price_vectorized = np.vectorize(price_misaligned_grid)
             price_vectorized(np.arange(0, len(K)), K)
-
-
         else:
             price_vectorized = np.vectorize(price_aligned_grid)
             price_vectorized(np.arange(0, len(K)), K)
@@ -310,10 +308,10 @@ class LinearImpl(Impl):
     def coefficients(self,
                      nbar: int, W: float, S0: float, xmin: float, rho: float = 0,
                      misaligned_grid: bool = False) -> np.ndarray:
-        self.G[nbar - 1] = W * self.g1
-        self.G[: nbar - 1] = W - S0 * np.exp(xmin) * self._expos[:nbar - 1] * self.g2
-
-        if misaligned_grid == True:
+        if not misaligned_grid:
+            self.G[nbar - 1] = W * self.g1
+            self.G[: nbar - 1] = W - S0 * np.exp(xmin) * self._expos[:nbar - 1] * self.g2
+        else:
             dx = self.dx
             zeta = self.a * rho
 
