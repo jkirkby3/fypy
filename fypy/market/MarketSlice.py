@@ -39,6 +39,21 @@ class OTMStrikeFilter(StrikeFilter):
         return False
 
 
+class RelativeStrikeFilter(StrikeFilter):
+    def __init__(self, min_relative: float, max_relative: float):
+        self._min_relative = min_relative
+        self._max_relative = max_relative
+
+    def keep_strike(self, strike: Strike) -> bool:
+        rel_strike = strike.strike() / strike.forward()
+        if rel_strike > self._max_relative:
+            return False
+        if rel_strike < self._min_relative:
+            return False
+
+        return True
+
+
 class MidPriceFilter(StrikeFilter):
     def __init__(self, min_price: float):
         self._min_price = min_price
