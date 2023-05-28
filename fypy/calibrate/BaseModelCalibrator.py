@@ -23,7 +23,7 @@ class BaseModelCalibrator(ABC):
         self.surface = surface
 
         # Set the minimizer
-        self._minimizer = minimizer or LeastSquares(max_nfev=200, ftol=1e-09, xtol=1e-09, gtol=1e-09, verbose=1)
+        self._minimizer = minimizer or LeastSquares(max_nfev=120, ftol=1e-07, xtol=1e-07, gtol=1e-07, verbose=1)
 
     @property
     def surface(self) -> MarketSurface:

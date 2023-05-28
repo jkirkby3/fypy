@@ -47,8 +47,8 @@ class YahooFinanceLoader(object):
         # divs = data.dividends
 
         hist = data.history()['Close']
-        spot = hist.iloc[0]
-        date_time = hist.index[0]
+        spot = hist.iloc[-1]
+        date_time = hist.index[-1]
         date = date_time.date()
 
         expiries = data.options
