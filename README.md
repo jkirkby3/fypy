@@ -9,9 +9,11 @@ This library is under active development, although the currently posted features
 ### Models
 
 - Black-Scholes
-- Jump Diffusions: Merton, Kou
-- Levy: Variance Gamma, Normal Inverse Gaussian (NIG), CGMY/KoBoL
-- Stochastic Volatility: Heston (more to come)
+- Jump Diffusions: Merton, Kou (Double Exponential)
+- Levy: Variance Gamma, Normal Inverse Gaussian (NIG), CGMY/KoBoL, Bilateral Gamma
+- Stochastic Volatility: Heston
+- SVJ: Bates, Heston + Double Expo Jumps
+- SLV: SABR
 
 ### Pricing Methods
 - Analytical: closed form pricing when available, e.g. Black Scholes
@@ -21,6 +23,8 @@ This library is under active development, although the currently posted features
 ### Model Calibration
 - Levy Model Calibration (VG, NIG, CGMY, MJD, Kou, etc)
 - Heston Stochastic Volatility Model Calibration
+- Stochastic Volatility with Jumps Model Calibration
+- SABR Model calibration
 
 ## Coming Soon !
 
