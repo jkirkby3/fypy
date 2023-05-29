@@ -308,10 +308,11 @@ class LinearImpl(Impl):
     def coefficients(self,
                      nbar: int, W: float, S0: float, xmin: float, rho: float = 0,
                      misaligned_grid: bool = False) -> np.ndarray:
-        if not misaligned_grid:
-            self.G[nbar - 1] = W * self.g1
-            self.G[: nbar - 1] = W - S0 * np.exp(xmin) * self._expos[:nbar - 1] * self.g2
-        else:
+
+        self.G[nbar - 1] = W * self.g1
+        self.G[: nbar - 1] = W - S0 * np.exp(xmin) * self._expos[:nbar - 1] * self.g2
+
+        if misaligned_grid:
             dx = self.dx
             zeta = self.a * rho
 
