@@ -40,9 +40,10 @@ class YahooFinanceLoader(object):
         import yfinance as yf  # https://github.com/ranaroussi/yfinance
         import requests_cache
 
-        session = requests_cache.CachedSession('yfinance.cache')
-        session.headers['User-agent'] = 'my-program/1.0'
-        data = yf.Ticker(ticker, session=session)
+        #session = requests_cache.CachedSession('yfinance.cache')
+        #session.headers['User-agent'] = 'my-program/1.0'
+        #data = yf.Ticker(ticker, session=session)
+        data = yf.Ticker(ticker)
 
         # divs = data.dividends
 
