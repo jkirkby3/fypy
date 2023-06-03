@@ -43,8 +43,13 @@ class FourierModelCalibrator(BaseModelCalibrator):
             left = 0
             for ttm, market_slice in self.surface.slices.items():
                 num_strikes = len(market_slice.strikes)
-                pricer.price_strikes_fill(T=ttm, K=market_slice.strikes, is_calls=market_slice.is_calls,
-                                          output=all_prices[left:left + num_strikes])
+                try:
+                    pricer.price_strikes_fill(T=ttm, K=market_slice.strikes, is_calls=market_slice.is_calls,
+                                              output=all_prices[left:left + num_strikes])
+                except Exception as e:
+                    print(f'Error getting pricies, filling with nan: {e}')
+                    for i in range(num_strikes):
+                        all_prices[left + i] = np.nan
                 left += num_strikes
             return all_prices
 

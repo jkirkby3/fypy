@@ -67,6 +67,16 @@ class FourierModel(Calibratable, ABC):
         """ Get the forwarding term structure """
         return self._forwardCurve
 
+    @discountCurve.setter
+    def discountCurve(self, new_curve: DiscountCurve):
+        """ Get the discount Curve term structure """
+        self._discountCurve = new_curve
+
+    @forwardCurve.setter
+    def forwardCurve(self, new_curve: ForwardCurve):
+        """ Get the forwarding term structure """
+        self._forwardCurve = new_curve
+
     # ============================
     # Fourier interface
     # ============================

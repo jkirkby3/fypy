@@ -5,6 +5,7 @@ from fypy.termstructures.EquityForward import EquityForward
 from fypy.termstructures.ForwardCurve import ForwardCurve
 from fypy.volatility.implied import ImpliedVolCalculator
 
+import numpy as np
 from abc import ABC, abstractmethod
 
 
@@ -16,6 +17,22 @@ class SliceFilter(ABC):
 
 class NeverFilterSlice(SliceFilter):
     def keep(self, market_slice: MarketSlice) -> bool:
+        return True
+
+
+class FilterTTM(SliceFilter):
+    def __init__(self,
+                 min_ttm: float = 0.,
+                 max_ttm: float = np.nan):
+        self._min_ttm = min_ttm
+        self._max_ttm = max_ttm
+
+    def keep(self, market_slice: MarketSlice) -> bool:
+        if market_slice.T < self._min_ttm:
+            return False
+        if market_slice.T > self._max_ttm:
+            return False
+
         return True
 
 
