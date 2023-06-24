@@ -118,7 +118,7 @@ class ModelVolSurfaceSlices(ModelVolSurface):
         return self._slices[self.first_ttm].model_var(x=x) / self.first_ttm * T
 
     def _extrapolate_var_far(self, x: Union[float, np.ndarray], T: float) -> Union[float, np.ndarray]:
-        return self._slices[self.last_ttm].model_var(x=x) / self.first_ttm * T
+        return self._slices[self.last_ttm].model_var(x=x) / self.last_ttm * T
 
     def _interpolate_var(self, x: Union[float, np.ndarray], T: float) -> Union[float, np.ndarray]:
         right_index = np.searchsorted(self._ttms, T, side='right')
