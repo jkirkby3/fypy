@@ -58,6 +58,15 @@ class DiscountCurve_ConstRate(DiscountCurve):
         """
         return np.exp(-self._r * T)
 
+    def implied_rate(self,  T: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+        """
+        Acquire the value for constant rate curves to circumvent numerical discrepancies
+        arising from mathematical computations
+        :param T: float or np.ndarray, time from which we imply the continuous rate, over [0,T]
+        :return: float or np.ndarray (matches shape of input), the implied rate
+        """
+        return self._r*np.ones_like(T)
+
 
 class EmptyDiscountCurve(DiscountCurve):
     """ Empty discount curve, always returns 1.0. """
