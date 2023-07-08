@@ -1,4 +1,5 @@
 from typing import Dict, Any
+import copy
 
 import numpy as np
 import scipy
@@ -49,11 +50,8 @@ class ProjBarrierPricer(StrikesPricer):
         Note: need to be override to handle multi-strike
         """
         output = np.empty_like(K, dtype=float)
-        for i in range(len(output)):
-            output_i = np.asarray([output[i]])
-            self.price_strikes_fill(T=T, K=np.asarray([K[i]]), is_calls=np.asarray([is_calls[i]]), output=output_i, M=M,
-                                    H=H, down=down, rebate=rebate)
-            output[i] = output_i
+        self.price_strikes_fill(T=T, K=K, M=M, H=H, down=down,
+                                rebate=rebate, is_calls=is_calls, output=output)
         return output
 
     def price(self,
@@ -92,7 +90,7 @@ class ProjBarrierPricer(StrikesPricer):
         :return: None, this method fills in the output array, make sure its sized properly first
         """
         # option_params is a dictionary that includes all the parameters associated with the barrier option
-        option_params = {
+        option_params_default = {
             'S0': self._model.spot(),
             'T': T,
             'K': K,
@@ -106,7 +104,7 @@ class ProjBarrierPricer(StrikesPricer):
         }
 
         # grid_params is a dictionary that includes all the parameters associated with the numerical grid
-        grid_params = {
+        grid_params_default = {
             'dx': self._get_dx(T=T, K=K),
             'nbar': self._nbar_computation(T=T, K=K, dx=self._get_dx(T=T, K=K)),
             'nnot ': 0,
@@ -120,8 +118,8 @@ class ProjBarrierPricer(StrikesPricer):
         }
 
         # thet_params is a dictionary that includes all the parameters associated with the theta arrays
-        thet_params = {
-            'Thet': [0] * int(grid_params['grid_K']),
+        thet_params_default = {
+            'Thet': [0] * int(grid_params_default['grid_K']),
             'rho': 0,
             'zeta': 0,
             'q_plus': (1 + np.sqrt(3 / 5)) / 2,
@@ -132,7 +130,9 @@ class ProjBarrierPricer(StrikesPricer):
         if down == 1:
             # DOWN AND OUT CALL
             if is_calls[0] == 1:
-                self.down_and_out_call(option_params, grid_params, thet_params, output)
+                self.down_and_out_call(option_params_default=option_params_default,
+                                       grid_params_default=grid_params_default, thet_params_default=thet_params_default,
+                                       output=output)
 
             # DOWN AND OUT PUT
             else:
@@ -150,36 +150,44 @@ class ProjBarrierPricer(StrikesPricer):
                 raise NotImplementedError("Only down and out call pricer has been implemented")
 
     # down_and_out_call method prices down and out call barrier options
-    def down_and_out_call(self, option_params: Dict[str, Any], grid_params: Dict[str, Any],
-                          thet_params: Dict[str, Any], output: np.ndarray):
+    def down_and_out_call(self, option_params_default: Dict[str, Any], grid_params_default: Dict[str, Any],
+                          thet_params_default: Dict[str, Any], output: np.ndarray):
 
-        # update of numerical grid values, such as xmin, nnot, a, nbar
-        self._grid_update(option_params=option_params, grid_params=grid_params)
+        # TODO : extract the common parts for each strike from the for loop
+        for index in range(len(option_params_default['K'])):
 
-        # computation of orthogonal projection coefficients
-        beta = self._beta_computation(option_params=option_params, grid_params=grid_params)
+            # creation of the dictionaries that are going to be updated
+            option_params, grid_params, thet_params = copy.deepcopy(option_params_default), copy.deepcopy(
+                grid_params_default), copy.deepcopy(thet_params_default)
 
-        # update of the difference (rho) and normalized difference (zeta) with respect to the nearest grid point
-        ProjBarrierPricer._rho_zeta_update(option_params=option_params, grid_params=grid_params,
-                                           thet_params=thet_params)
+            # update of numerical grid values, such as xmin, nnot, a, nbar
+            self._grid_update(option_params=option_params, grid_params=grid_params, index=index)
 
-        # update of the parameter val_rebate, depending on the option parameter "rebate"
-        ProjBarrierPricer._val_rebate_update(option_params=option_params, grid_params=grid_params, beta=beta)
+            # computation of orthogonal projection coefficients
+            beta = self._beta_computation(option_params=option_params, grid_params=grid_params)
 
-        # computation of basic integrals related to payoff coefficients
-        varthet_01, varthet_star = ProjBarrierPricer._payoff_constants_computation(grid_params=grid_params)
+            # update of the difference (rho) and normalized difference (zeta) with respect to the nearest grid point
+            ProjBarrierPricer._rho_zeta_update(option_params=option_params, grid_params=grid_params,
+                                               thet_params=thet_params, index=index)
 
-        # update of payoff integrals (Theta)
-        ProjBarrierPricer._Thet_update(option_params=option_params, grid_params=grid_params, thet_params=thet_params,
-                                       varthet_01=varthet_01, varthet_star=varthet_star)
+            # update of the parameter val_rebate, depending on the option parameter "rebate"
+            ProjBarrierPricer._val_rebate_update(option_params=option_params, grid_params=grid_params, beta=beta)
 
-        Val = ProjBarrierPricer._Val_computation(option_params=option_params, grid_params=grid_params,
-                                                 thet_params=thet_params,
-                                                 beta=beta, varthet_star=varthet_star)
+            # computation of basic integrals related to payoff coefficients
+            varthet_01, varthet_star = ProjBarrierPricer._payoff_constants_computation(grid_params=grid_params)
 
-        ProjBarrierPricer._price_doc_computation(grid_params=grid_params, Val=Val, output=output)
+            # update of payoff integrals (Theta)
+            ProjBarrierPricer._Thet_update(option_params=option_params, grid_params=grid_params,
+                                           thet_params=thet_params,
+                                           varthet_01=varthet_01, varthet_star=varthet_star,index=index)
 
-    def _grid_update(self, option_params: Dict[str, Any], grid_params: Dict[str, Any]):
+            Val = ProjBarrierPricer._Val_computation(option_params=option_params, grid_params=grid_params,
+                                                     thet_params=thet_params,
+                                                     beta=beta, varthet_star=varthet_star,index=index)
+
+            ProjBarrierPricer._price_doc_computation(grid_params=grid_params, Val=Val, index=index, output=output)
+
+    def _grid_update(self, option_params: Dict[str, Any], grid_params: Dict[str, Any], index: int):
 
         # The method _grid_update adjusts the parameters of the grid used
         # It modifies the grid based on the barrier and initial asset prices,
@@ -203,7 +211,8 @@ class ProjBarrierPricer(StrikesPricer):
             grid_params['dx'] = l / (1 - nnot)
 
         grid_params['a'] = 1 / grid_params['dx']
-        grid_params['nbar'] = self.get_nbar(a=grid_params['a'], lws=np.log(option_params['K'][0] / option_params['S0']),
+        grid_params['nbar'] = self.get_nbar(a=grid_params['a'],
+                                            lws=np.log(option_params['K'][index] / option_params['S0']),
                                             lam=grid_params['xmin'])
 
     def _beta_computation(self, option_params: Dict[str, Any], grid_params: Dict[str, Any]):
@@ -221,11 +230,11 @@ class ProjBarrierPricer(StrikesPricer):
 
     @staticmethod
     def _rho_zeta_update(option_params: Dict[str, Any], grid_params: Dict[str, Any],
-                         thet_params: Dict[str, Any]):
+                         thet_params: Dict[str, Any], index: int):
 
         # update of the difference (rho) and normalized difference (zeta) with respect to the nearest grid point
 
-        thet_params['rho'] = np.log(option_params['K'][0] / option_params['S0']) - (
+        thet_params['rho'] = np.log(option_params['K'][index] / option_params['S0']) - (
                 grid_params['xmin'] + (grid_params['nbar'] - 1) * grid_params['dx'])
         thet_params['zeta'] = grid_params['a'] * thet_params['rho']
 
@@ -279,19 +288,19 @@ class ProjBarrierPricer(StrikesPricer):
 
     @staticmethod
     def _Thet_update(option_params: Dict[str, Any], grid_params: Dict[str, Any],
-                     thet_params: Dict[str, Any], varthet_01: float, varthet_star: float):
+                     thet_params: Dict[str, Any], varthet_01: float, varthet_star: float, index: int):
 
         # update of payoff integrals (Theta)
         d_0, dbar_0, d_1, dbar_1 = ProjBarrierPricer._d_computation(grid_params=grid_params, thet_params=thet_params)
-        thet_params['Thet'][grid_params['nbar'] - 1] = option_params['K'][0] * (
+        thet_params['Thet'][grid_params['nbar'] - 1] = option_params['K'][index] * (
                 np.exp(-thet_params['rho']) * d_0 - dbar_0)
-        thet_params['Thet'][grid_params['nbar']] = option_params['K'][0] * (
+        thet_params['Thet'][grid_params['nbar']] = option_params['K'][index] * (
                 np.exp(grid_params['dx'] - thet_params['rho']) * (varthet_01 + d_1) - (.5 + dbar_1))
         thet_params['Thet'][grid_params['nbar'] + 1:grid_params['grid_K']] = np.exp(
             grid_params['xmin'] + grid_params['dx'] * np.arange(grid_params['nbar'] + 1,
                                                                 grid_params['grid_K'])) * option_params[
                                                                                  'S0'] * varthet_star - \
-                                                                             option_params['K'][0]
+                                                                             option_params['K'][index]
 
         thet_params['Thet'][0] = thet_params['Thet'][0] + 0.5 * option_params['rebate']
         thet_params['Thet'] = (np.array(thet_params['Thet'])).flatten()
@@ -312,9 +321,9 @@ class ProjBarrierPricer(StrikesPricer):
     @staticmethod
     def _Thetbar_computation(option_params: Dict[str, Any], grid_params: Dict[str, Any],
                              beta: np.ndarray, varthet_star: float,
-                             toepR: np.ndarray):
+                             toepR: np.ndarray, index: int):
 
-        Thetbar1 = np.exp(-option_params['nrdt']) * option_params['K'][0] * np.cumsum(
+        Thetbar1 = np.exp(-option_params['nrdt']) * option_params['K'][index] * np.cumsum(
             beta[2 * grid_params['grid_K'] - 1:grid_params['grid_K'] - 1:-1])
 
         Thetbar2 = np.exp(-option_params['nrdt']) * option_params['S0'] * varthet_star * np.exp(
@@ -378,7 +387,7 @@ class ProjBarrierPricer(StrikesPricer):
 
     @staticmethod
     def _Val_computation(option_params: Dict[str, Any], grid_params: Dict[str, Any],
-                         thet_params: Dict[str, Any], beta: np.ndarray, varthet_star: float):
+                         thet_params: Dict[str, Any], beta: np.ndarray, varthet_star: float, index: int):
 
         toepM, toepR = ProjBarrierPricer._toepM_toepR_computation(grid_params=grid_params, beta=beta)
 
@@ -386,7 +395,7 @@ class ProjBarrierPricer(StrikesPricer):
                                                                     grid_params=grid_params,
                                                                     beta=beta,
                                                                     varthet_star=varthet_star,
-                                                                    toepR=toepR)
+                                                                    toepR=toepR, index=index)
 
         p = ProjBarrierPricer._p_computation(grid_params=grid_params, thet_params=thet_params, toepM=toepM)
         if option_params['rebate'] != 0:
@@ -400,18 +409,18 @@ class ProjBarrierPricer(StrikesPricer):
                                              toepM=toepM, Thetbar1=Thetbar1, Thetbar2=Thetbar2, Val=Val)
 
     @staticmethod
-    def _price_doc_computation(grid_params: Dict[str, Any], Val: np.ndarray, output: np.ndarray):
+    def _price_doc_computation(grid_params: Dict[str, Any], Val: np.ndarray, index: int, output: np.ndarray):
         if grid_params['interp_Atend'] == 1:
             dd = 0 - (grid_params['xmin'] + (grid_params['nnot'] - 1) * grid_params['dx'])
             price = Val[grid_params['nnot'] - 1] + (
                     Val[grid_params['nnot']] - Val[
                 grid_params['nnot'] - 1]) * dd / grid_params['dx']  # ie linear interp of nnot and nnot+1
-            output[0] = max(0, price)
+            output[index] = max(0, price)
 
 
         else:
             price = Val[grid_params['nnot'] - 1]
-            output[0] = max(0, price)
+            output[index] = max(0, price)
 
     def _get_dt_values(self, T: float, M: float):
         dt = T / M
@@ -457,10 +466,10 @@ class ProjBarrierPricer(StrikesPricer):
     def get_L(self):
         return self._L
 
-    def get_r(self, T:float):
+    def get_r(self, T: float):
         return self._model.discountCurve.implied_rate(T)
 
-    def get_q(self, T:float):
+    def get_q(self, T: float):
         if getattr(self._model.forwardCurve, 'divDiscountCurve', None) is not None:
             return self._model.forwardCurve.divDiscountCurve.implied_rate(T)
         else:
