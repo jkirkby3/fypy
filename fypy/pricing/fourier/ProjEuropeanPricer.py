@@ -6,11 +6,7 @@ from fypy.pricing.fourier.ProjPricer import ProjPricer, Impl, CubicImpl, LinearI
 
 
 class ProjEuropeanPricer(ProjPricer):
-    def __init__(self,
-                 model: FourierModel,
-                 N: int = 2 ** 9,
-                 L: float = 10.,
-                 order: int = 3,
+    def __init__(self, model: FourierModel, N: int = 2 ** 9, L: float = 10., order: int = 3,
                  alpha_override: float = np.nan):
         """
         Price European options using the Frame Projection (PROJ) method of Kirkby (2015)
@@ -26,11 +22,8 @@ class ProjEuropeanPricer(ProjPricer):
         :param alpha_override: float, if supplied, this overrides the rule using L to determine the gridwidth,
             allows you to use your own rule to set grid if desired
         """
-        self._model = model
-        self._order = order
-        self._N = N
-        self._L = L
-        self._alpha_override = alpha_override
+        super().__init__(model, N, L, order, alpha_override)
+
         self._efficient_multi_strike = [1]
 
         if order not in (0, 1, 3):
