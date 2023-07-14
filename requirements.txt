@@ -15,3 +15,4 @@ setuptools~=65.3.0
 requests-cache
 yfinance
 seaborn~=0.12.2
+numba~=0.57.1
