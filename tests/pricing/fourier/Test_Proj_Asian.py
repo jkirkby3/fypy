@@ -36,13 +36,11 @@ class Test_Proj_Arithmetic_Asian(unittest.TestCase):
                                      sigma=0.4373)  # CHOOSE PROJ PARAMETERS
         pricer = ProjArithmeticAsianPricer(model=model, N=N)
 
-
         # Parameters
         T = np.arange(0.1, 2.0, 0.3)  # Time (in years)
         K = np.arange(40, 191, 2)  # Strike
         M = np.arange(48, 64, 4)  # Number of monitoring points
         put_call = np.asarray([False, True])
-
 
         # Testing multi-strike method
         for p_c in put_call:
@@ -57,25 +55,18 @@ class Test_Proj_Arithmetic_Asian(unittest.TestCase):
                         self.assertAlmostEqual(prices[k], matlab_prices[np.where(put_call == p_c)[0][0],
                         k, np.where(T == t)[0][0], np.where(M == m)[0][0]], 10)
 
-
-
-        #Testing single-strike method, selecting central elements
-        inner_T=[T[len(T) // 2 - 1], T[len(T) // 2]] if len(T) % 2 == 0 else [T[len(T) // 2]]
-        inner_K= [K[len(K) // 2 - 1], K[len(K) // 2]] if len(K) % 2 == 0 else [K[len(K) // 2]]
+        # Testing single-strike method, selecting central elements
+        inner_T = [T[len(T) // 2 - 1], T[len(T) // 2]] if len(T) % 2 == 0 else [T[len(T) // 2]]
+        inner_K = [K[len(K) // 2 - 1], K[len(K) // 2]] if len(K) % 2 == 0 else [K[len(K) // 2]]
 
         for p_c in put_call:
             for t in inner_T:
                 for k in inner_K:
-                        for m in M:
-                            price = pricer.price(T=t,
-                                                          M=m,
-                                                          K=k,
-                                                          is_call=p_c)
+                    for m in M:
+                        price = pricer.price(T=t, M=m, K=k, is_call=p_c)
 
-                            self.assertAlmostEqual(price, matlab_prices[np.where(put_call == p_c)[0][0],
-                                np.where(K == k)[0][0], np.where(T == t)[0][0], np.where(M == m)[0][0]], 10)
-
-
+                        self.assertAlmostEqual(price, matlab_prices[np.where(put_call == p_c)[0][0],
+                        np.where(K == k)[0][0], np.where(T == t)[0][0], np.where(M == m)[0][0]], 10)
 
         if __name__ == '__main__':
             unittest.main()
