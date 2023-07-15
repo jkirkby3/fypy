@@ -23,6 +23,7 @@ class Test_Proj_Barrier(unittest.TestCase):
         matlab_prices = loadmat(file_path)['prices']
 
 
+
         # Model and Pricer creation
         S0 = 100
         r = 0.05
@@ -36,12 +37,12 @@ class Test_Proj_Barrier(unittest.TestCase):
         pricer = ProjBarrierPricer(model=model, N=N)
 
 
-        # Parameters
-        T = np.arange(0.1, 2, 0.3)  # Time (in years)
-        K = np.arange(90, 147, 7)  # Strike
-        M = np.arange(40, 65, 12)  # number of discrete monitoring points
-        H = np.arange(70, 89, 9)  # barrier
 
+        T = np.asarray([0.1, 0.7, 1, 1.9])  # Time (in years)
+        K = np.arange(80,201,2)  # Strike
+        M = np.asarray([40,65])  # number of discrete monitoring points
+        H = 70  # barrier
+        rebate=5
         is_calls = np.empty(len(K))
         is_calls.fill(True)
 
@@ -49,42 +50,39 @@ class Test_Proj_Barrier(unittest.TestCase):
         # Testing multi-strike method
         for t in T:
             for m in M:
-                for h in H:
-                    prices = pricer.price_strikes(T=t,
-                                                  M=m,
-                                                  H=h,
-                                                  down=True,
-                                                  rebate=5,
-                                                  K=K,
-                                                  is_calls=is_calls)
-                    for k in range(len(K)):
-                        self.assertAlmostEqual(prices[k], matlab_prices[
-                            np.where(T == t)[0][0], k, np.where(M == m)[0][0], np.where(H == h)[0][0]], 6)
+                prices = pricer.price_strikes(T=t,
+                                              M=m,
+                                              H=H,
+                                              down=True,
+                                              rebate=rebate,
+                                              K=K,
+                                              is_calls=is_calls)
+                for k in range(len(K)):
+                    self.assertAlmostEqual(prices[k], matlab_prices[
+                        np.where(T == t)[0][0], k, np.where(M == m)[0][0]], 6)
 
 
 
         #Testing single-strike method, selecting central elements
+
         inner_T=[T[len(T) // 2 - 1], T[len(T) // 2]] if len(T) % 2 == 0 else [T[len(T) // 2]]
         inner_K= [K[len(K) // 2 - 1], K[len(K) // 2]] if len(K) % 2 == 0 else [K[len(K) // 2]]
         inner_M= [M[len(M) // 2 - 1], M[len(M) // 2]] if len(M) % 2 == 0 else [M[len(M) // 2]]
-        inner_H= [H[len(H) // 2 - 1], H[len(H) // 2]] if len(H) % 2 == 0 else [H[len(H) // 2]]
 
 
         for t in inner_T:
             for k in inner_K:
                 for m in inner_M:
-                    for h in inner_H:
                         single_price = pricer.price(T=t,
                                                     M=m,
-                                                    H=h,
+                                                    H=H,
                                                     down=True,
-                                                    rebate=5,
+                                                    rebate=rebate,
                                                     K=k,
                                                     is_call=is_calls[0])
 
                         self.assertAlmostEqual(single_price, matlab_prices[
-                            np.where(T == t)[0][0], np.where(K == k)[0][0], np.where(M == m)[0][0], np.where(H == h)[0][
-                                0]], 6)
+                            np.where(T == t)[0][0], np.where(K == k)[0][0], np.where(M == m)[0][0]], 6)
 
 
 if __name__ == '__main__':

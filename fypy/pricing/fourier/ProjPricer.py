@@ -14,7 +14,7 @@ class ProjPricer(StrikesPricer):
                  order: int = 3,
                  alpha_override: float = np.nan):
         """
-        Common Proj class for all different derivatives that can be priced using Proj
+        Common base Proj class for all different derivatives that can be priced using Proj
 
         :param model: Fourier model
         :param N: int (power of 2), number of basis coefficients (increase to increase accuracy)

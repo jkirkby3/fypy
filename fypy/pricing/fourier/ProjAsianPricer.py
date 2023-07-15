@@ -1,6 +1,6 @@
 import numba
+from numba import prange
 import numpy as np
-
 from fypy.model.levy.LevyModel import LevyModel
 from fypy.pricing.fourier.ProjPricer import ProjPricer, Impl, CubicImpl
 
@@ -97,16 +97,9 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         :return: None, this method fills in the output array, make sure its sized properly first
         """
 
-        # Storing all the parameters in two structured numpy arrays: grid_params and option_params
-        grid_params = np.zeros(1,
-                               dtype=[('dx', float),
-                                      ('a', float),
-                                      ('alpha', float),
-                                      ('ystar', float),
-                                      ('nbar', int),
-                                      ('AA', float),
-                                      ('C_aN', float)])
 
+        # definition of option_params as a structured numpy array, in order to use numba
+        # the array contains: S0, T, M, dt, C
         option_params = np.array([(self.get_model().spot(),
                                    T,
                                    M,
@@ -117,6 +110,18 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
                                         ('M', int),
                                         ('dt', float),
                                         ('C', float)])
+
+        # definition of grid_params_default as a structured numpy array, in order to use numba
+        # the array contains: dx, a, alpha, ystar, nbar, AA, C_aN
+        grid_params = np.zeros(1,
+                               dtype=[('dx', float),
+                                      ('a', float),
+                                      ('alpha', float),
+                                      ('ystar', float),
+                                      ('nbar', int),
+                                      ('AA', float),
+                                      ('C_aN', float)])
+
 
         # alpha setting
         grid_params['alpha'] = self.get_alpha(T=T)
@@ -155,8 +160,6 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
                             K=K, is_calls=is_calls,
                             output=output)
 
-
-
     def grid_update(self, grid_params: np.ndarray):
 
         grid_params['dx'] = 2 * grid_params['alpha'].item() / (self._N - 1)
@@ -167,17 +170,22 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         grid_params['C_aN'] = A / self._N
         grid_params['AA'] = 1 / A
 
-
-
     def benhamou_shift_computation(self, option_params: np.ndarray, grid_params: np.ndarray):
 
         # ER : risk neutral expected return over increment dt=1/M (can set to zero if it is unknown)
         ER = (self.get_r(option_params['T'].item()) - self.get_q(
             option_params['M'].item()) + self.get_model().convexity_correction()) * (option_params['dt'].item())
 
-        return benhamou_shift_computation_nb(option_params=option_params, grid_params=grid_params, ER=ER, N=self._N)
+        M = option_params['M'].item()
+        x1 = np.zeros(M)
+        x1[0] = ER
 
+        for m in range(1, M):
+            x1[m] = ER + np.log(1 + np.exp(x1[m - 1]))  # BENHAMOU SHIFT
 
+        Nm = np.floor(grid_params['a'].item() * (x1 - ER))
+        x1 = ER + (1 - self._N / 2) * grid_params['dx'].item() + Nm * grid_params['dx'].item()
+        return x1, Nm
 
     @staticmethod
     def asian_coefficient_constants(option_params: np.ndarray, grid_params: np.ndarray, impl: Impl):
@@ -205,16 +213,12 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         return beta_update_nb(option_params=option_params, grid_params=grid_params, beta=beta, PhiR=PhiR, x1=x1, Nm=Nm,
                               xi=xi, zeta=zeta, N=self._N)
 
-
-
     @staticmethod
     def _nbar_update(option_params: np.ndarray, grid_params: np.ndarray, x1: np.ndarray, index: int, K: np.ndarray):
 
         grid_params['ystar'] = np.log((option_params['M'].item() + 1) * K[index] / option_params['S_0'].item() - 1)
         grid_params['nbar'] = int(
             np.floor((grid_params['ystar'].item() - x1[option_params['M'].item() - 1]) * grid_params['a'] + 1))
-
-
 
     def grid_widening(self, option_params: np.ndarray, grid_params: np.ndarray, K: np.ndarray):
         # this method is used iff the grid is not wide enough
@@ -235,8 +239,6 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
 
         return impl, x1, beta
 
-
-
     def beta_strike_adjustment(self, option_params: np.ndarray, grid_params: np.ndarray, impl: Impl, x1: np.ndarray,
                                beta: np.ndarray,
                                index: int, K: np.ndarray):
@@ -247,7 +249,7 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         # this while is used iff the grid is not wide enough
         while grid_params['nbar'].item() + 1 > self._N:
             impl, x1, beta = self.grid_widening(option_params=option_params,
-                                          grid_params=grid_params, K=K)
+                                                grid_params=grid_params, K=K)
 
         x1_adjusted, beta_adjusted = ProjAsianPricer.copy_original_arrays(x1, beta)
 
@@ -258,24 +260,8 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
 
 
 
-@numba.jit(nopython=True)
-def benhamou_shift_computation_nb(option_params: np.ndarray, grid_params: np.ndarray, ER: float, N: int):
-
-    M = option_params['M'].item()
-    x1 = np.zeros(M)
-    x1[0] = ER
-
-    for m in range(1, M):
-        x1[m] = ER + np.log(1 + np.exp(x1[m - 1]))  # BENHAMOU SHIFT
-
-    Nm = np.floor(grid_params['a'].item() * (x1 - ER))
-    x1 = ER + (1 - N / 2) * grid_params['dx'].item() + Nm * grid_params['dx'].item()
-    return x1, Nm
-
-
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def thet_computation_nb(grid_params: np.ndarray, x1: np.ndarray, Neta: int, Neta5: int):
-
     g2 = np.sqrt(5 - 2 * np.sqrt(10 / 7)) / 6
     g3 = np.sqrt(5 + 2 * np.sqrt(10 / 7)) / 6
     dx = grid_params['dx'].item()
@@ -290,7 +276,7 @@ def thet_computation_nb(grid_params: np.ndarray, x1: np.ndarray, Neta: int, Neta
     return thet
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def sig_computation_nb():
     # Weights
     g2 = np.sqrt(5 - 2 * np.sqrt(10 / 7)) / 6
@@ -311,7 +297,7 @@ def sig_computation_nb():
     return sig
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def PSI_computation_nb(option_params: np.ndarray, grid_params: np.ndarray, x1: np.ndarray, Nm: np.ndarray, N: int):
     # PSI Matrix: 5-Point GAUSSIAN
     NNM = int(N + Nm[option_params['M'].item() - 2])  # Number of columns of PSI
@@ -344,7 +330,7 @@ def PSI_computation_nb(option_params: np.ndarray, grid_params: np.ndarray, x1: n
     return PSI
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def beta_update_nb(option_params: np.ndarray, grid_params: np.ndarray, beta: np.ndarray, PhiR: np.ndarray,
                    x1: np.ndarray, Nm: np.ndarray, xi: np.ndarray, zeta: np.ndarray, N: int):
     beta = np.real(np.fft.fft(beta))
@@ -356,7 +342,7 @@ def beta_update_nb(option_params: np.ndarray, grid_params: np.ndarray, beta: np.
     # Convert both matrices to complex128 before using np.dot()
     beta = np.dot(PSI[:, :N].astype(np.complex128), beta.astype(np.complex128)) * PhiR
 
-    for m in range(2, option_params['M'].item()):
+    for m in prange(2, option_params['M'].item()):
         beta[1:N] = zeta * beta[1:N] * np.exp(-1j * x1[m - 1] * xi)
         beta[0] = grid_params['AA'].item()
         beta = np.real(np.fft.fft(beta))
@@ -365,10 +351,9 @@ def beta_update_nb(option_params: np.ndarray, grid_params: np.ndarray, beta: np.
     return beta
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def beta_strike_adjustment_nb(grid_params: np.ndarray, x1_adjusted: np.ndarray, beta_adjusted: np.ndarray, M: int,
                               N: int, xi: np.ndarray, zeta: np.ndarray):
-
     # shift adjustment
     x1_adjusted[M - 1] = grid_params['ystar'].item() - (grid_params['nbar'].item() - 1) * grid_params['dx'].item()
 
@@ -381,7 +366,7 @@ def beta_strike_adjustment_nb(grid_params: np.ndarray, x1_adjusted: np.ndarray, 
     return np.real(np.fft.fft(beta_adjusted))
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def payoff_coefficient_computation_nb(option_params: np.ndarray, grid_params: np.ndarray,
                                       payoff_coefficient_constants: np.ndarray, index: int, K: np.ndarray):
     dx = grid_params['dx'].item()
@@ -399,7 +384,7 @@ def payoff_coefficient_computation_nb(option_params: np.ndarray, grid_params: np
     return G
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True, nogil=True)
 def price_update_nb(option_params: np.ndarray, grid_params: np.ndarray, beta_adjusted: np.ndarray,
                     G: np.ndarray, r: float, q: float, index: int, K: np.ndarray, is_calls: np.ndarray,
                     output: np.ndarray, ):
