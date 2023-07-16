@@ -298,7 +298,7 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         while grid_params['nbar'].item() + 1 > self._N:
             self._grid_widening(option_params=option_params, grid_params=grid_params, impl_original=impl,
                                 x1_original=x1, beta_original=beta,
-                                payoff_coefficient_constants=payoff_coefficient_constants)
+                                payoff_coefficient_constants=payoff_coefficient_constants, K=K)
 
 
 
