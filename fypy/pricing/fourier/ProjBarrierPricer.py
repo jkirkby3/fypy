@@ -180,16 +180,7 @@ class ProjBarrierPricer(ProjPricer):
         nqdt = -self.get_q(T) * dt
         return nrdt, nqdt
 
-    def get_dx(self, T: float, K: np.ndarray):
-        lws_vec = np.log(K[0] / self.get_model().spot())
 
-        cumulants = self.get_model().cumulants(T)
-        alph = cumulants.get_truncation_heuristic(L=self.get_L()) \
-            if np.isnan(self.get_alpha_override()) else self.get_alpha_override()
-
-        # Ensure that grid is wide enough to cover the strike
-        alph = max(alph, 1.15 * np.max(np.abs(lws_vec)) + cumulants.c1)
-        return 2 * alph / (self.get_N() - 1)
 
     @staticmethod
     def _grid_update(option_params: np.ndarray, grid_params: np.ndarray, is_calls: np.ndarray):

@@ -62,16 +62,26 @@ class ProjPricer(StrikesPricer):
         return nbar
 
     def _nbar_lam_computation(self, T: float, K: np.ndarray, dx: float):
-        cumulants = self.get_model().cumulants(T)
+        cumulants = self.get_model().cumulants(T=T)
         lam = cumulants.c1 - (self.get_N() / 2 - 1) * dx
         return self.get_nbar(a=1. / dx, lws=np.log(K[0] / self.get_model().spot()),
                              lam=lam)
 
     def get_alpha(self, T: float):
-        cumulants = self.get_model().cumulants(T)
+        cumulants = self.get_model().cumulants(T=T)
 
         return cumulants.get_truncation_heuristic(L=self.get_L()) \
             if np.isnan(self.get_alpha_override()) else self.get_alpha_override()
+
+
+    def get_dx(self, T: float, K: np.ndarray):
+        lws_vec = np.log(K / self.get_model().spot())
+
+        c1 = self.get_model().cumulants(T).c1
+
+        # Ensure that grid is wide enough to cover the strike
+        alph = max(self.get_alpha(T=T), 1.15 * np.max(np.abs(lws_vec)) + c1)
+        return 2 * alph / (self.get_N() - 1)
 
     @staticmethod
     def copy_original_arrays(*arrays):
