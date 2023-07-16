@@ -37,10 +37,10 @@ class Test_Proj_Arithmetic_Asian(unittest.TestCase):
         pricer = ProjArithmeticAsianPricer(model=model, N=N)
 
         # Parameters
+        put_call = np.asarray([False, True])
         T = np.arange(0.1, 2.0, 0.3)  # Time (in years)
         K = np.arange(40, 191, 2)  # Strike
         M = np.arange(48, 64, 4)  # Number of monitoring points
-        put_call = np.asarray([False, True])
 
         # Testing multi-strike method
         for p_c in put_call:

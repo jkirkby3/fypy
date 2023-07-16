@@ -96,7 +96,6 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         :return: None, this method fills in the output array, make sure its sized properly first
         """
 
-
         # definition of option_params as a structured numpy array, in order to use numba
         # the array contains: S0, T, M, dt, C
         option_params = np.array([(self.get_model().spot(),
@@ -124,8 +123,8 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         # alpha setting
         grid_params['alpha'] = self.get_alpha(T=T)
 
-        # firs update of most of the parameters
-        self._grid_update(grid_params=grid_params)
+        # setting most of the grid parameters
+        self._grid_setting(grid_params=grid_params)
 
         # impl object creation
         impl = CubicImpl(N=self._N, dx=grid_params['dx'].item(), model=self._model, T=option_params['dt'].item(),
@@ -133,40 +132,45 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
 
         # establish the initial values that will be uniform across all strikes.
         # this calculation is consolidated into a single method because, depending on nbar,
-        # it may need to be repeated if the grid is not sufficiently wide
-        x1, beta, payoff_coefficient_constants= self._initial_value_setting(option_params=option_params,
-                                                                            grid_params=grid_params,
-                                                                            impl=impl)
+        # it may need to be repeated if the grid is not sufficiently wide.
+        # This method includes:
+        # - benhamou shift arrays computation
+        # - orthogonal projection coefficients computation
+        # - payoff constants for arithmetic asian option
+        x1, beta, payoff_coefficient_constants = self._initial_values_setting(option_params=option_params,
+                                                                              grid_params=grid_params,
+                                                                              impl=impl)
 
         for index in range(len(K)):
-
-            # update of the nbar value and related ystar
-            # and assess the necessity for expanding the numerical grid
-            self._nbar_update(option_params=option_params, grid_params=grid_params,
-                                                   impl=impl,
-                                                   x1=x1,
-                                                   beta=beta,
-                                                   payoff_coefficient_constants=payoff_coefficient_constants,
-                                                   index=index,
-                                                   K=K)
+            # update of the nbar value and related ystar,
+            # and assess the necessity for expanding the numerical grid.
+            # if the numerical grid need to be expanded, initial values will be updated inside this method
+            self._grid_update(option_params=option_params, grid_params=grid_params,
+                              impl=impl,
+                              x1=x1,
+                              beta=beta,
+                              payoff_coefficient_constants=payoff_coefficient_constants,
+                              index=index,
+                              K=K)
 
             # adjustment of the orthogonal projection coefficients for each strike
-            beta_adjusted = self._beta_strike_adjustment(option_params=option_params, grid_params=grid_params, impl=impl,
-                                                        x1=x1, beta=beta)
+            beta_adjusted = ProjArithmeticAsianPricer._beta_strike_adjustment(option_params=option_params,
+                                                                              grid_params=grid_params, impl=impl,
+                                                                              x1=x1, beta=beta, N=self.get_N())
 
             # computation of the payoff coefficients
             G = ProjArithmeticAsianPricer._payoff_coefficient_computation(option_params=option_params,
                                                                           grid_params=grid_params,
-                                                       payoff_coefficient_constants=payoff_coefficient_constants,
-                                                       index=index, K=K)
+                                                                          payoff_coefficient_constants=payoff_coefficient_constants,
+                                                                          index=index, K=K)
 
             # final update of the prices
             self._price_update(option_params=option_params, grid_params=grid_params, beta_adjusted=beta_adjusted, G=G,
-                                 index=index,
-                                 K=K, is_calls=is_calls,
-                                 output=output)
+                               index=index,
+                               K=K, is_calls=is_calls,
+                               output=output)
 
-    def _grid_update(self, grid_params: np.ndarray):
+    def _grid_setting(self, grid_params: np.ndarray):
 
         grid_params['dx'] = 2 * grid_params['alpha'].item() / (self._N - 1)
         grid_params['a'] = 1 / grid_params['dx'].item()
@@ -176,16 +180,12 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         grid_params['C_aN'] = A / self._N
         grid_params['AA'] = 1 / A
 
-
-
-
     def benhamou_shift_computation(self, option_params: np.ndarray, grid_params: np.ndarray):
 
         # ER : risk neutral expected return over increment dt=1/M (can set to zero if it is unknown)
         ER = (self.get_r(option_params['T'].item())
               - self.get_q(option_params['T'].item())
               + self.get_model().convexity_correction()) * (option_params['dt'].item())
-
 
         x1 = np.zeros(option_params['M'].item())
         x1[0] = ER
@@ -197,134 +197,12 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         x1 = ER + (1 - self._N / 2) * grid_params['dx'].item() + Nm * grid_params['dx'].item()
         return x1, Nm
 
-
-    def _beta_computation(self, option_params: np.ndarray = None, grid_params: np.ndarray = None, impl: Impl = None,
-                          x1: np.ndarray = None,
-                          Nm: np.ndarray = None
-                          ):
-        N = self.get_N()
-        xi = impl.w[1:]
-
-        PhiR = np.concatenate(
-            ([1], np.exp((option_params['dt'].item()) * self.get_model().symbol(xi))))
-
-        beta = np.concatenate(
-            ([grid_params['AA'].item()], impl.zeta() * PhiR[1:self._N] * np.exp(-1j * x1[0] * xi)))
-
-        beta = np.real(np.fft.fft(beta))
-
-        PhiR = grid_params['C_aN'].item() * PhiR
-
-        PSI = self._PSI_computation(M=option_params['M'].item(), dx=grid_params['dx'].item(),
-                                      a=grid_params['a'].item(), x1=x1, Nm=Nm)
-
-        # Convert both matrices to complex128 before using np.dot()
-        beta = np.dot(PSI[:, :N].astype(np.complex128), beta.astype(np.complex128)) * PhiR
-
-        for m in range(2, option_params['M'].item()):
-            beta[1:N] = impl.zeta() * beta[1:N] * np.exp(-1j * x1[m - 1] * xi)
-            beta[0] = grid_params['AA'].item()
-            beta = np.real(np.fft.fft(beta))
-            beta = np.dot(PSI[:, int(Nm[m - 1]):int(Nm[m - 1]) + N].astype(np.complex128),
-                          beta.astype(np.complex128)) * PhiR
-        return beta
-
-
-    @staticmethod
-    def asian_coefficient_constants(C: float, dx: float, impl: Impl):
-
-        # getting the used constants through impl
-        constants = np.asarray([(1 / 24 - impl.g1) * np.exp(-dx), 0.5 - impl.g2,
-                                (23 / 24 - impl.g3) * np.exp(dx), impl.g4 / 90])
-
-        return C * constants
-
-    def _initial_value_setting(self, option_params: np.ndarray, grid_params:np.ndarray, impl:Impl):
-        # benhamou shift arrays computation
-        x1, Nm = self.benhamou_shift_computation(option_params=option_params, grid_params=grid_params)
-
-        # orthogonal projection coefficients computation
-        beta = self._beta_computation(option_params=option_params, grid_params=grid_params, x1=x1,
-                                      Nm=Nm, impl=impl)
-
-        # getting payoff constants for arithmetic asian option
-        payoff_coefficient_constants = ProjArithmeticAsianPricer.asian_coefficient_constants(
-            C=option_params['C'].item(), dx=grid_params['dx'].item(), impl=impl)
-
-        return x1, beta, payoff_coefficient_constants
-
-
-
-    def _grid_widening(self, option_params: np.ndarray, grid_params: np.ndarray, impl_original:Impl,
-                       x1_original:np.ndarray, beta_original:np.ndarray,
-                       payoff_coefficient_constants:np.ndarray,
-                       K: np.ndarray):
-
-        # this method is used iff the grid is not wide enough
-
-        # first of all, the alpha is set
-        grid_params['alpha'] = max(1.15 * grid_params['alpha'].item(), 1.15 * np.max(
-            np.abs(np.log(K / self.get_model().spot()))) + self.get_model().cumulants(option_params['T'].item()).c1)
-
-        # since the alpha has been changed, all the initial values outside the for cycle must be changed
-
-        # the grid is re-updated accordingly
-        self._grid_update(grid_params=grid_params)
-
-        # all the necessary values are re-computed
-        impl_original = CubicImpl(N=self._N, dx=grid_params['dx'].item(), model=self._model,
-                                  T=option_params['dt'].item(),
-                         max_n_bar=grid_params['nbar'].item())
-
-        # the values are modified by reference
-        x1_original,beta_original,payoff_coefficient_constants= self._initial_value_setting(option_params=option_params,
-                                                                                            grid_params=grid_params,
-                                                                                            impl=impl_original)
-
-
-
-
-    def _nbar_update(self, option_params: np.ndarray, grid_params: np.ndarray,
-                     impl:Impl, x1: np.ndarray, beta:np.ndarray,
-                     payoff_coefficient_constants: np.ndarray,
-                     index: int, K: np.ndarray):
-
-        # update of the nbar value and related ystar
-        grid_params['ystar'] = np.log((option_params['M'].item() + 1) * K[index] / option_params['S_0'].item() - 1)
-        grid_params['nbar'] = int(
-            np.floor((grid_params['ystar'].item() - x1[option_params['M'].item() - 1]) * grid_params['a'] + 1))
-
-        # assess the necessity for expanding the numerical grid
-        while grid_params['nbar'].item() + 1 > self._N:
-            self._grid_widening(option_params=option_params, grid_params=grid_params, impl_original=impl,
-                                x1_original=x1, beta_original=beta,
-                                payoff_coefficient_constants=payoff_coefficient_constants, K=K)
-
-
-
-    def _beta_strike_adjustment(self, option_params: np.ndarray, grid_params: np.ndarray, impl: Impl, x1: np.ndarray,
-                               beta: np.ndarray,
-                               ):
-
-
-        # the information related to the strike is contained inside ystar and nbar
-
-        x1_adjusted, beta_adjusted = ProjArithmeticAsianPricer.copy_original_arrays(x1, beta)
-
-        # shift adjustment
-        x1_adjusted[option_params['M'].item() - 1] = grid_params['ystar'].item() \
-                                                     - (grid_params['nbar'].item() - 1) * grid_params['dx'].item()
-
-        # beta adjustment
-        beta_adjusted[1:self._N] = impl.zeta() * beta_adjusted[1:self._N] * np.exp(
-            -1j * x1_adjusted[option_params['M'].item() - 1] * impl.w[1:])
-
-        beta_adjusted[0] = grid_params['AA'].item()
-
-        return np.real(np.fft.fft(beta_adjusted))
-
     @staticmethod
     def _thet_computation(dx: float, x1: np.ndarray, Neta: int, Neta5: int):
+
+        # Computation of thet is required for the _PSI_computation method,
+        # which itself is essential for the functioning of the _beta_computation method
+
         g2 = np.sqrt(5 - 2 * np.sqrt(10 / 7)) / 6
         g3 = np.sqrt(5 + 2 * np.sqrt(10 / 7)) / 6
 
@@ -339,6 +217,10 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
 
     @staticmethod
     def _sig_computation():
+
+        # Computation of sig is required for the _PSI_computation method,
+        # which itself is essential for the functioning of the _beta_computation method
+
         # Weights
         g2 = np.sqrt(5 - 2 * np.sqrt(10 / 7)) / 6
         g3 = np.sqrt(5 + 2 * np.sqrt(10 / 7)) / 6
@@ -357,8 +239,8 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
 
         return sig
 
-    def _PSI_computation(self, M: int, dx:float, a:float, x1: np.ndarray, Nm: np.ndarray):
-        N = self.get_N()
+    @staticmethod
+    def _PSI_computation(N: int, M: int, dx: float, a: float, x1: np.ndarray, Nm: np.ndarray):
         NNM = int(N + Nm[M - 2])  # Number of columns of PSI
         Neta = 5 * NNM + 15  # Sample size
         Neta5 = NNM + 3
@@ -391,11 +273,159 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
 
         return PSI
 
+    def _beta_computation(self, option_params: np.ndarray = None, grid_params: np.ndarray = None, impl: Impl = None,
+                          x1: np.ndarray = None,
+                          Nm: np.ndarray = None
+                          ):
+        N = self.get_N()
+        xi = impl.w[1:]
 
+        PhiR = np.concatenate(
+            ([1], np.exp((option_params['dt'].item()) * self.get_model().symbol(xi))))
+
+        beta = np.concatenate(
+            ([grid_params['AA'].item()], impl.zeta() * PhiR[1:self._N] * np.exp(-1j * x1[0] * xi)))
+
+        beta = np.real(np.fft.fft(beta))
+
+        PhiR = grid_params['C_aN'].item() * PhiR
+
+        PSI = ProjArithmeticAsianPricer._PSI_computation(N=self.get_N(),
+                                                         M=option_params['M'].item(), dx=grid_params['dx'].item(),
+                                                         a=grid_params['a'].item(), x1=x1, Nm=Nm)
+
+        # Convert both matrices to complex128 before using np.dot(),
+        # this will be necessary when using a just-in-time compiler
+        beta = np.dot(PSI[:, :N].astype(np.complex128), beta.astype(np.complex128)) * PhiR
+
+        for m in range(2, option_params['M'].item()):
+            beta[1:N] = impl.zeta() * beta[1:N] * np.exp(-1j * x1[m - 1] * xi)
+            beta[0] = grid_params['AA'].item()
+            beta = np.real(np.fft.fft(beta))
+            beta = np.dot(PSI[:, int(Nm[m - 1]):int(Nm[m - 1]) + N].astype(np.complex128),
+                          beta.astype(np.complex128)) * PhiR
+        return beta
+
+    @staticmethod
+    def asian_coefficient_constants(C: float, dx: float, impl: Impl):
+
+        # getting the used constants through impl
+        constants = np.asarray([(1 / 24 - impl.g1) * np.exp(-dx), 0.5 - impl.g2,
+                                (23 / 24 - impl.g3) * np.exp(dx), impl.g4 / 90])
+
+        return C * constants
+
+    def _initial_values_setting(self, option_params: np.ndarray, grid_params: np.ndarray, impl: Impl):
+        # benhamou shift arrays computation
+        x1, Nm = self.benhamou_shift_computation(option_params=option_params, grid_params=grid_params)
+
+        # orthogonal projection coefficients computation
+        beta = self._beta_computation(option_params=option_params, grid_params=grid_params, x1=x1,
+                                      Nm=Nm, impl=impl)
+
+        # getting payoff constants for arithmetic asian option
+        payoff_coefficient_constants = ProjArithmeticAsianPricer.asian_coefficient_constants(
+            C=option_params['C'].item(), dx=grid_params['dx'].item(), impl=impl)
+
+        return x1, beta, payoff_coefficient_constants
+
+    def _initial_values_update(self, option_params: np.ndarray, grid_params: np.ndarray, impl: Impl,
+                               x1: np.ndarray, beta: np.ndarray, payoff_coefficient_constants: np.ndarray):
+
+        # this method is used withing the method _grid_widening,
+        # which in turn is used iff the grid is not wide enough.
+
+        # if nbar and grid values changed,
+        # the initial values obtained using _initial_values_setting must be re-computed.
+
+        # to utilize a just-in-time compiler in the near future,
+        # we maintain numpy array structures and update values by reference,
+        # instead of using dictionaries or objects.
+
+        new_impl = CubicImpl(N=self._N, dx=grid_params['dx'].item(), model=self._model,
+                             T=option_params['dt'].item(),
+                             max_n_bar=grid_params['nbar'].item())
+
+        # the attributes of the impl object are reassigned
+        for attr in vars(new_impl):
+            setattr(impl, attr, getattr(new_impl, attr))
+
+        new_initial_values = self._initial_values_setting(option_params=option_params,
+                                                          grid_params=grid_params,
+                                                          impl=impl)
+
+        # the values of the initial values [x1, beta, payoff_coefficient_constants] are reassigned
+        for initial, new in zip([x1, beta, payoff_coefficient_constants], new_initial_values):
+            initial[:] = new
+
+    def _grid_widening(self, option_params: np.ndarray, grid_params: np.ndarray, impl: Impl,
+                       x1: np.ndarray, beta: np.ndarray, payoff_coefficient_constants: np.ndarray,
+                       K: np.ndarray, index: int):
+
+        # this method is used iff the grid is not wide enough
+
+        while grid_params['nbar'].item() + 1 > self._N:
+            # first of all, the alpha is set
+            grid_params['alpha'] = max(1.15 * grid_params['alpha'].item(), 1.15 * np.max(
+                np.abs(np.log(K / self.get_model().spot()))) + self.get_model().cumulants(option_params['T'].item()).c1)
+
+            # the grid is re-updated accordingly
+            self._grid_setting(grid_params=grid_params)
+
+            # update of the nbar value and related ystar
+            ProjArithmeticAsianPricer._nbar_update(option_params=option_params, grid_params=grid_params, x1=x1, K=K,
+                                                   index=index)
+
+        # since the alpha has been changed, all the initial values outside initial the for cycle must be updated
+        self._initial_values_update(option_params=option_params, grid_params=grid_params,
+                                    impl=impl, x1=x1, beta=beta,
+                                    payoff_coefficient_constants=payoff_coefficient_constants)
+
+    @staticmethod
+    def _nbar_update(option_params: np.ndarray, grid_params: np.ndarray, x1: np.ndarray, K: np.ndarray, index: int):
+        # update of the nbar value and related ystar
+        grid_params['ystar'] = np.log((option_params['M'].item() + 1) * K[index] / option_params['S_0'].item() - 1)
+        grid_params['nbar'] = int(
+            np.floor((grid_params['ystar'].item() - x1[option_params['M'].item() - 1]) * grid_params['a'] + 1))
+
+    def _grid_update(self, option_params: np.ndarray, grid_params: np.ndarray,
+                     impl: Impl, x1: np.ndarray, beta: np.ndarray,
+                     payoff_coefficient_constants: np.ndarray,
+                     index: int, K: np.ndarray):
+
+        # update of the nbar value and related ystar
+        ProjArithmeticAsianPricer._nbar_update(option_params=option_params, grid_params=grid_params, x1=x1, K=K,
+                                               index=index)
+        # assess the necessity for expanding the numerical grid
+        if grid_params['nbar'].item() + 1 > self._N:
+            self._grid_widening(option_params=option_params, grid_params=grid_params, impl=impl,
+                                x1=x1, beta=beta, payoff_coefficient_constants=payoff_coefficient_constants,
+                                K=K, index=index)
+
+    @staticmethod
+    def _beta_strike_adjustment(option_params: np.ndarray, grid_params: np.ndarray, impl: Impl, x1: np.ndarray,
+                                beta: np.ndarray, N: int
+                                ):
+
+
+        x1_adjusted, beta_adjusted = ProjArithmeticAsianPricer.copy_original_arrays(x1, beta)
+
+        # shift adjustment,
+        # the information related to the strike is contained inside ystar and nbar
+        x1_adjusted[option_params['M'].item() - 1] = grid_params['ystar'].item() \
+                                                     - (grid_params['nbar'].item() - 1) * grid_params['dx'].item()
+
+        # beta adjustment
+        beta_adjusted[1:N] = impl.zeta() * beta_adjusted[1:N] * np.exp(
+            -1j * x1_adjusted[option_params['M'].item() - 1] * impl.w[1:])
+
+        beta_adjusted[0] = grid_params['AA'].item()
+
+        return np.real(np.fft.fft(beta_adjusted))
 
     @staticmethod
     def _payoff_coefficient_computation(option_params: np.ndarray, grid_params: np.ndarray,
-                                          payoff_coefficient_constants: np.ndarray, index: int, K: np.ndarray):
+                                        payoff_coefficient_constants: np.ndarray, index: int, K: np.ndarray):
         dx = grid_params['dx'].item()
         nbar = grid_params['nbar'].item()
 
@@ -411,8 +441,8 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
         return G
 
     def _price_update(self, option_params: np.ndarray, grid_params: np.ndarray, beta_adjusted: np.ndarray,
-                        G: np.ndarray, index: int, K: np.ndarray, is_calls: np.ndarray,
-                        output: np.ndarray):
+                      G: np.ndarray, index: int, K: np.ndarray, is_calls: np.ndarray,
+                      output: np.ndarray):
 
         T = option_params['T'].item()
         M = option_params['M'].item()
