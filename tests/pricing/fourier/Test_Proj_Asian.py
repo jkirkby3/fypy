@@ -32,7 +32,7 @@ class Test_Proj_Arithmetic_Asian(unittest.TestCase):
         div_disc = DiscountCurve_ConstRate(rate=q)
         fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
         model = BilateralGammaMotion(forwardCurve=fwd, discountCurve=disc_curve, alpha_p=2.7884,
-                                     lambda_p=12.2805, alhpa_m=0.2699, lambda_m=0.2699,
+                                     lambda_p=12.2805, alhpa_m=0.2699, lambda_m=1.2018,
                                      sigma=0.4373)  # CHOOSE PROJ PARAMETERS
         pricer = ProjArithmeticAsianPricer(model=model, N=N)
 
@@ -63,6 +63,7 @@ class Test_Proj_Arithmetic_Asian(unittest.TestCase):
             for t in inner_T:
                 for k in inner_K:
                     for m in M:
+
                         price = pricer.price(T=t, M=m, K=k, is_call=p_c)
 
                         self.assertAlmostEqual(price, matlab_prices[np.where(put_call == p_c)[0][0],
