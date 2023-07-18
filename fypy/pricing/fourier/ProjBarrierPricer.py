@@ -338,7 +338,6 @@ class ProjBarrierPricer(ProjPricer):
                                                                               2 * grid_params['grid_K'].item()))
 
 
-        # check if it possible to reduce arrays size
         Thetbar2_concat = np.zeros(len(toepR))
         Thetbar2_concat[:len(Thetbar2)] = Thetbar2
 
