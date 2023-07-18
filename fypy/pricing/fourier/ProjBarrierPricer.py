@@ -161,18 +161,18 @@ class ProjBarrierPricer(ProjPricer):
                                                 lws=np.log(K[index] / option_params['S0'].item()),
                                                 lam=grid_params['xmin'].item())
 
+            # update of payoff integrals (Theta)
+            Thet = ProjBarrierPricer._Thet_creation(option_params=option_params, grid_params=grid_params,
+                                                    K=K[index], varthet_01=varthet_01, varthet_star=varthet_star)
+
             # computation of orthogonal projection coefficients
             beta = self._beta_computation(option_params=option_params, grid_params=grid_params)
 
-            # update of payoff integrals (Theta)
-            Thet = ProjBarrierPricer._Thet_creation(option_params=option_params, grid_params=grid_params,
-                                                    K=K, varthet_01=varthet_01, varthet_star=varthet_star, index=index)
-
-            Val = ProjBarrierPricer._Val_computation(option_params=option_params, grid_params=grid_params, K=K,
+            Val = ProjBarrierPricer._Val_computation(option_params=option_params, grid_params=grid_params, K=K[index],
                                                      Thet=Thet,
-                                                     beta=beta, varthet_star=varthet_star, index=index)
+                                                     beta=beta, varthet_star=varthet_star)
 
-            ProjBarrierPricer._price_doc_update(grid_params=grid_params, Val=Val, index=index, output=output)
+            output[index] = ProjBarrierPricer._price_doc_computation(grid_params=grid_params, Val=Val)
 
     def _get_dt_values(self, T: float, M: float):
         dt = T / M
@@ -242,9 +242,9 @@ class ProjBarrierPricer(ProjPricer):
 
     @staticmethod
     def _rho_zeta_computation(option_params: np.ndarray, grid_params: np.ndarray,
-                              K: np.ndarray, index: int):
+                              K:float):
         # update of the difference (rho) and normalized difference (zeta) with respect to the nearest grid point
-        rho = np.log(K[index] / option_params['S0'].item()) - (
+        rho = np.log(K / option_params['S0'].item()) - (
                 grid_params['xmin'].item() + (grid_params['nbar'].item() - 1) * grid_params['dx'].item())
         zeta = grid_params['a'].item() * rho.item()
 
@@ -276,20 +276,20 @@ class ProjBarrierPricer(ProjPricer):
 
     @staticmethod
     def _Thet_creation(option_params: np.ndarray, grid_params: np.ndarray,
-                       K: np.ndarray, varthet_01: float, varthet_star: float,
-                       index: int):
+                       K: float, varthet_01: float, varthet_star: float
+                       ):
 
         Thet = np.zeros(grid_params['grid_K'].item(), dtype=float)
 
         # update of the difference (rho) and normalized difference (zeta) with respect to the nearest grid point
         rho, zeta = ProjBarrierPricer._rho_zeta_computation(option_params=option_params, grid_params=grid_params,
-                                                            K=K, index=index)
+                                                            K=K)
 
         d_0, dbar_0, d_1, dbar_1 = ProjBarrierPricer._d_computation(dx=grid_params['dx'].item(), zeta=zeta, rho=rho)
 
         # first values of payoff integrals (Theta)
-        Thet[grid_params['nbar'].item() - 1] = K[index] * (np.exp(-rho) * d_0 - dbar_0)
-        Thet[grid_params['nbar']] = K[index] \
+        Thet[grid_params['nbar'].item() - 1] = K * (np.exp(-rho) * d_0 - dbar_0)
+        Thet[grid_params['nbar']] = K \
                                     * (np.exp(grid_params['dx'].item() - rho)
                                        * (varthet_01 + d_1) - (.5 + dbar_1))
 
@@ -297,7 +297,7 @@ class ProjBarrierPricer(ProjPricer):
             grid_params['xmin'].item() + grid_params['dx'].item()
             * np.arange(grid_params['nbar'].item() + 1, grid_params['grid_K'].item())) \
                                                                             * option_params[
-                                                                                'S0'].item() * varthet_star - K[index]
+                                                                                'S0'].item() * varthet_star - K
 
         Thet[0] = Thet[0] + 0.5 * option_params['rebate'].item()
         return Thet.flatten()
@@ -306,43 +306,39 @@ class ProjBarrierPricer(ProjPricer):
     def _val_rebate_computation(rebate: float, grid_K: int,
                                 beta: np.ndarray):
         # if rebate is not 0option_params.
-        rebate = rebate
-        grid_K = grid_K
+        val_rebate = np.zeros(grid_K)
         if rebate != 0:
-            val_rebate = np.zeros(grid_K)
             val_rebate[:grid_K - 1] = np.flip(np.cumsum(beta[:grid_K - 1]))
             val_rebate *= rebate
-            return val_rebate  # NOTE: this includes the discounting via beta
-        else:
-            return np.zeros(grid_K)
+
+        return val_rebate
 
     @staticmethod
     def _toepM_toepR_computation(grid_K: int, beta: np.ndarray):
-        toepM = np.empty(2 * grid_K)
+        toepM = np.zeros(2 * grid_K)
         toepM[:grid_K] = beta[grid_K - 1::-1]
-        toepM[grid_K] = 0.0
         toepM[grid_K + 1:] = beta[2 * grid_K - 2:grid_K - 1:-1]
         toepM = np.fft.fft(toepM)
 
-        toepR = np.empty(2 * grid_K)
+        toepR = np.zeros(2 * grid_K)
         toepR[:grid_K] = beta[2 * grid_K - 1:grid_K - 1:-1]
-        toepR[grid_K] = 0.0
-        toepR[grid_K + 1:] = np.zeros(grid_K - 1)
         toepR = np.fft.fft(toepR)
 
         return toepM, toepR
 
     @staticmethod
-    def _Thetbars_computation(option_params: np.ndarray, grid_params: np.ndarray, K: np.ndarray,
+    def _Thetbars_computation(option_params: np.ndarray, grid_params: np.ndarray, K:float,
                               beta: np.ndarray, varthet_star: float,
-                              toepR: np.ndarray, index: int):
-        Thetbar1 = np.exp(-option_params['nrdt'].item()) * K[index] * np.cumsum(
+                              toepR: np.ndarray):
+        Thetbar1 = np.exp(-option_params['nrdt'].item()) * K * np.cumsum(
             beta[2 * grid_params['grid_K'].item() - 1:grid_params['grid_K'].item() - 1:-1])
 
         Thetbar2 = np.exp(-option_params['nrdt'].item()) * option_params['S0'].item() * varthet_star * np.exp(
             grid_params['xmin'].item() + grid_params['dx'].item() * np.arange(grid_params['grid_K'].item(),
                                                                               2 * grid_params['grid_K'].item()))
 
+
+        # check if it possible to reduce arrays size
         Thetbar2_concat = np.zeros(len(toepR))
         Thetbar2_concat[:len(Thetbar2)] = Thetbar2
 
@@ -356,10 +352,9 @@ class ProjBarrierPricer(ProjPricer):
 
     @staticmethod
     def _p_computation(grid_K: int, Thet: np.ndarray, toepM: np.ndarray):
-        len_Thet = grid_K
-        len_zeros = len(toepM) - len_Thet
-        Thet_extended = np.zeros(len_Thet + len_zeros)
-        Thet_extended[:len_Thet] = Thet[:len_Thet]
+
+        Thet_extended = np.zeros(len(toepM))
+        Thet_extended[:grid_K] = Thet[:grid_K]
         Thet_fft = np.fft.fft(Thet_extended)
         p = np.real(np.fft.ifft(toepM * Thet_fft))
 
@@ -405,9 +400,9 @@ class ProjBarrierPricer(ProjPricer):
         return Val
 
     @staticmethod
-    def _Val_computation(option_params: np.ndarray, grid_params: np.ndarray, K: np.ndarray,
+    def _Val_computation(option_params: np.ndarray, grid_params: np.ndarray, K:float,
                          Thet: np.ndarray, beta: np.ndarray,
-                         varthet_star: float, index: int):
+                         varthet_star: float):
         # computation of the parameter val_rebate, depending on the option parameter "rebate"
         val_rebate = ProjBarrierPricer._val_rebate_computation(rebate=option_params['rebate'].item(),
                                                                grid_K=grid_params['grid_K'].item(),
@@ -419,7 +414,7 @@ class ProjBarrierPricer(ProjPricer):
                                                                      grid_params=grid_params, K=K,
                                                                      beta=beta,
                                                                      varthet_star=varthet_star,
-                                                                     toepR=toepR, index=index)
+                                                                     toepR=toepR)
 
         p = ProjBarrierPricer._p_computation(grid_K=grid_params['grid_K'].item(), Thet=Thet, toepM=toepM)
 
@@ -434,15 +429,15 @@ class ProjBarrierPricer(ProjPricer):
                                              toepM=toepM, Thetbar1=Thetbar1, Thetbar2=Thetbar2, Val=Val)
 
     @staticmethod
-    def _price_doc_update(grid_params: np.ndarray, Val: np.ndarray, index: int, output: np.ndarray):
+    def _price_doc_computation(grid_params: np.ndarray, Val: np.ndarray):
         if grid_params['interp_Atend'].item() == 1:
             dd = 0 - (grid_params['xmin'].item() + (grid_params['nnot'].item() - 1) * grid_params['dx'].item())
             price = Val[grid_params['nnot'].item() - 1].item() + (
                     Val[grid_params['nnot'].item()].item() - Val[
                 grid_params['nnot'].item() - 1].item()) * dd / grid_params[
                         'dx'].item()  # ie linear interp of nnot and nnot+1
-            output[index] = max(0.0, price)
+            return max(0.0, price)
 
 
         else:
-            output[index] = max(0.0, Val[grid_params['nnot'].item() - 1].item())
+            return max(0.0, Val[grid_params['nnot'].item() - 1].item())
