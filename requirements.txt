@@ -16,3 +16,4 @@ requests-cache
 yfinance
 seaborn~=0.12.2
 numba~=0.57.1
+torch==2.0.1
