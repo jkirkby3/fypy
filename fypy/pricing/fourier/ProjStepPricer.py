@@ -19,7 +19,7 @@ class ProjStepPricer(ProjPricer):
 
         Ref: JL Kirkby,ROBUST BARRIER OPTION PRICING BY FRAME PROJECTION UNDER EXPONENTIAL LEVY DYNAMICS
 
-        :param model: Fourier model
+        :param model: Levy model
         :param N: int (power of 2), number of basis coefficients (increase to increase accuracy)
         :param L: float, controls gridwidth of density. A value of L = 10~14 works well... For Black-Scholes,
             L = 6 is fine, for heavy tailed processes such as CGMY, may want a larger value to get very high accuracy
