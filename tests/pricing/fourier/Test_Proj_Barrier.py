@@ -12,6 +12,10 @@ from fypy.termstructures.EquityForward import EquityForward
 
 class Test_Proj_Barrier(unittest.TestCase):
     def test_barrier_bilateral_gamma_motion(self):
+
+        # N.B. Regarding alphas computation, check _TODO_ comment in ProjBarrier
+
+
         # Load of MATLAB results
         # Get the absolute path to the directory of the current script
         script_dir = os.path.dirname(os.path.abspath(__file__))

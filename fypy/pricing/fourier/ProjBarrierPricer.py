@@ -111,6 +111,7 @@ class ProjBarrierPricer(ProjPricer):
                       ('grid_K', 'i4'),
                       ('mult', 'i4')]
 
+        # TODO: alphas are computed in self.get_dx. Check BGM's second cumulant
         grid_params = np.array([(self.get_dx(T=T, K=K),
                                  1. / self.get_dx(T=T, K=K),
                                  self._nbar_lam_computation(T=T, K=K, dx=self.get_dx(T=T, K=K)),
