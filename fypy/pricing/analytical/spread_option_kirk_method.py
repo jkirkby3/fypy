@@ -5,7 +5,16 @@ About: Pricing Spread option using Kirk 2D method
 import math
 import scipy.stats as stats
 
-def spread_option_kirk_method(K, S0_1, S0_2, T, r, rho, sigma_1, sigma_2, q_1, q_2):
+def spread_option_kirk_method(K : float,
+                              S0_1 : float,
+                              S0_2 : float,
+                              T : float,
+                              r: float,
+                              rho: float,
+                              sigma_1: float,
+                              sigma_2: float,
+                              q_1: float,
+                              q_2: float) -> float:
     """
     Params:
     K: Option Strike
