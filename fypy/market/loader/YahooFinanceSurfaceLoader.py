@@ -68,6 +68,8 @@ class YahooFinanceLoader(object):
             dfs.append(DF_puts)
 
         df = pd.concat(dfs)
+
+        df['ticker'] = ticker
         df['spot'] = spot
         df['date'] = date
 
@@ -75,7 +77,6 @@ class YahooFinanceLoader(object):
         df = df[df['volume'] >= volume_filter]
         df.dropna(how='any', subset=['bid', 'ask'], inplace=True)
 
-        df['ticker'] = ticker
         return df
 
     def load_from_frame(self,
@@ -191,9 +192,21 @@ if __name__ == '__main__':
 
     loader = YahooFinanceLoader()
 
-    df1 = loader.load_df_from_api(ticker=tick)
+    from fypy.termstructures.EquityForward import EquityForward, DiscountCurve_ConstRate
+    from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
+
+    disc_curve = DiscountCurve_ConstRate(rate=0.02)
+    fwd = EquityForward(S0=100, discount=disc_curve)
+
+    # fetch option chain from yahoo and store in df1
+    df1 = loader.load_df_from_api(ticker=tick, volume_filter=0)
     df1.to_csv(fp, index=False)
 
-    df2 = loader.load_from_file(fpath=fp)
+    # gen market surface from df1
+    surf = loader.load_from_file(fpath=fp, disc_curve=disc_curve)
+
+    # calc ivs
+    ivc = ImpliedVolCalculator_Black76(fwd_curve=fwd, disc_curve=disc_curve)
+    surf.fill_implied_vols(calculator=ivc)
 
     # surf = loader.load_from_api(ticker=tick)
