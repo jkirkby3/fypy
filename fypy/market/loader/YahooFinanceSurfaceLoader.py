@@ -57,7 +57,7 @@ class YahooFinanceLoader(object):
 
         dfs = []
         for tenor in all_tenors:
-            DF_calls, DF_puts = data.option_chain(tenor)
+            DF_calls, DF_puts, json_summary_data = data.option_chain(tenor)
             DF_calls['expiry'] = tenor
             DF_calls['isCall'] = True
 
