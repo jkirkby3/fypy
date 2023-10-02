@@ -192,20 +192,20 @@ if __name__ == '__main__':
 
     loader = YahooFinanceLoader()
 
-    from fypy.termstructures.EquityForward import EquityForward, DiscountCurve_ConstRate
-    from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
-
-    disc_curve = DiscountCurve_ConstRate(rate=0.02)
-    fwd = EquityForward(S0=100, discount=disc_curve)
-
     # fetch option chain from yahoo and store in df1
     df1 = loader.load_df_from_api(ticker=tick, volume_filter=0)
     df1.to_csv(fp, index=False)
+
+    from fypy.termstructures.EquityForward import EquityForward, DiscountCurve_ConstRate
+    disc_curve = DiscountCurve_ConstRate(rate=0.02)
+    spot = df1.iloc[0]['spot']
+    fwd = EquityForward(S0=spot, discount=disc_curve)
 
     # gen market surface from df1
     surf = loader.load_from_file(fpath=fp, disc_curve=disc_curve)
 
     # calc ivs
+    from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
     ivc = ImpliedVolCalculator_Black76(fwd_curve=fwd, disc_curve=disc_curve)
     surf.fill_implied_vols(calculator=ivc)
 
