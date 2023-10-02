@@ -56,7 +56,13 @@ fypy requires:
 You can check the latest sources with the command
 
     git clone https://github.com/jkirkby3/fypy.git
-    
+
+## Test Suite
+
+You can run the full test suite with this command,
+
+    python -m unittest discover -s test -p '*_test.py'
+
     
 
 ## Example: Price Variance Gamma / Black-Scholes Models with PROJ (Fourier) Method
