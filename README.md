@@ -71,6 +71,7 @@ from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy.BlackScholes import *
 from fypy.model.levy.VarianceGamma import *
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
+from fypy.termstructures.EquityForward import EquityForward
 from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
 import matplotlib.pyplot as plt
 
@@ -92,7 +93,7 @@ fwd = EquityForward(S0=S0, discount=disc_curve, divDiscount=div_disc)
 # ============================
 # Create Black-Scholes Model
 # ============================
-model = BlackScholes(sigma=0.2, forwardCurve=fwd)
+model = BlackScholes(sigma=0.2, forwardCurve=fwd, discountCurve=fwd.discountCurve)
 pricer = ProjEuropeanPricer(model=model, N=2 ** 10)
 
 # Price a set of strikes
@@ -130,6 +131,4 @@ plt.legend()
 plt.xlabel(r'strike, $K$')
 plt.ylabel('implied vol')
 plt.show()
-
-
 ```
