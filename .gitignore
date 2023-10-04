@@ -4,3 +4,5 @@
 *.pyc
 *.idea
 *.cache
+
+.python-version
