@@ -44,7 +44,7 @@ setup(
   ],
   extras_require={
     "test": []
-  ],
+  },
   include_package_data=True,
   zip_safe=False,
 )
