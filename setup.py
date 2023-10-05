@@ -23,7 +23,7 @@ setup(
   install_requires=[
     "cycler",
     "kiwisolver",
-    "llvmlite==0.41.0",
+    "llvmlite==0.36.0",
     "matplotlib",
     "numpy",
     "Pillow",
