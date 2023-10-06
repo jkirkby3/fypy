@@ -24,22 +24,14 @@ setup(
   packages=find_packages(),
   python_requires=">=3.7",
   install_requires=[
-    "cycler",
-    "kiwisolver",
-    "llvmlite",
     "matplotlib",
     "numpy",
-    "Pillow",
-    "pyparsing",
     "python-dateutil",
-    "pytz",
     "scipy",
     "py_lets_be_rational>=1.0.1",
     "pandas",
-    "setuptools",
     "requests-cache",
     "yfinance",
-    "seaborn",
   ],
   extras_require={
     "test": []
