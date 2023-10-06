@@ -31,7 +31,7 @@ setup(
     "python-dateutil",
     "pytz",
     "scipy",
-    "six",
+    # "six",
     "py_lets_be_rational>=1.0.1",
     "pandas",
     "setuptools",
