@@ -24,4 +24,4 @@ jobs:
           pip install '.[test]'
       - name: Test with unittest
         run: |
-          python -m unittest discover -s test -p '*_test.py'
+          python tests/test_runner.py
