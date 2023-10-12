@@ -1,0 +1,137 @@
+import numpy as np
+
+from fypy.pricing.montecarlo.StochasticProcess import StochasticProcess
+
+
+class Trajectory:
+    def __init__(self, times: np.array, states: np.array):
+        self._times = times
+        self._states = states
+
+    def get_num_trajectories(self) -> int:
+        """
+        Get the number of trajectories contained in the Trajectory object.
+        """
+        return self._states.shape[0]
+
+    def get_times(self) -> np.array:
+        """
+        Get the time axis of the trajectories.
+        """
+        return self._times
+
+    def get_component_trajectory(self, i: int, state_index: int) -> np.array:
+        """
+        Get a single trajectory for a single part of a state.
+        """
+        return self._states[i, state_index, :]
+
+    def get_state_trajectory(self, i: int) -> np.array:
+        """
+        Get a single trajectory.
+        """
+        return self._states[i, :, :]
+
+
+class MonteCarloEngine:
+    """
+    A simple monte carlo for fast testing.
+    """
+
+    def __init__(self, stochastic_process: StochasticProcess, n_paths: int = 1000, dt: float = 1. / 365.25):
+        self._stochastic_process = stochastic_process
+        self._n_paths = n_paths
+        self._dt = dt
+
+        self._save_full_trajectory = False
+
+    def set_save_full_trajectory(self, save_full_trajectory: bool):
+        """
+        Set whether to save the full trajectory or just the final state.
+        """
+        self._save_full_trajectory = save_full_trajectory
+
+    def evolve(self, observation_times: np.array) -> Trajectory:
+        """
+        Evolve the stochastic process via monte carlo.
+
+        :param observation_times: the times at which to save the state of the stochastic process. Also used to determine
+        the range of times over which the process should be evolved. All observation times must be positive, and there
+        must be at least one observation time.
+        """
+        # np.random.seed(self.seed)
+
+        # Validate observation times.
+        if len(observation_times) == 0:
+            raise RuntimeError("must have at least one observation time")
+        observation_times = sorted(observation_times)
+        if observation_times[0] < 0:
+            raise RuntimeError("observation times must be positive")
+
+        # Make sure time zero is always an observation time.
+        if 0 < observation_times[0]:
+            observation_times = np.insert(observation_times, 0, 0.0)
+
+        t0 = 0
+        t1 = observation_times[-1]
+
+        rv_description = self._stochastic_process.describe_rvs()
+        n_rvs = len(rv_description)
+
+        # Number of steps to take
+        n_steps = int((t1 - t0) / self._dt) + 1
+
+        # Right now we only support normal random variables. Pre-generate all the random variables here.
+        rvs = np.random.normal(size=(n_steps, self._n_paths, n_rvs))
+
+        state_size = self._stochastic_process.state_size()
+        # Initialize the states array.
+        if self._save_full_trajectory:
+            times = np.zeros(n_steps + 1)
+            states_at_t = np.zeros(shape=(self._n_paths, n_steps + 1, state_size))
+        else:
+            times = np.zeros(len(observation_times))
+            states_at_t = np.zeros(shape=(self._n_paths, len(observation_times), state_size))
+
+        # Initialize time variables.
+        ti, tf = t0, t0 + self._dt
+
+        # Generate the initial state, save it in the states_at_t array.
+        state = self._stochastic_process.generate_initial_state(self._n_paths)
+        check_shape = np.shape(state)
+
+        # Make sure the state was the right shape.
+        if check_shape != (self._n_paths, state_size):
+            raise ValueError(
+                f"Initial state has incorrect shape, expected: {(self._n_paths, state_size)}, got: {check_shape}")
+
+        # Keep track of what the next observation time is.
+        next_obs_time = observation_times[1]
+        obs_time_index = 1  # We always save the initial state.
+        times[0] = ti  # Save the initial time
+        states_at_t[:, 0, :] = state
+        for n in range(n_steps):
+            state = self._stochastic_process.evolve(state, ti, tf, self._n_paths, rvs[n])
+            # Save the state.
+            if self._save_full_trajectory:
+                states_at_t[:, n + 1, :] = state
+                times[n + 1] = tf  # Save the next time
+            # TODO: Make sure we hit all observation times. Do this by using a smarter time grid.
+            elif ti < next_obs_time <= tf:
+                # Mark the next observation time as the next observation time after tf.
+                while obs_time_index < len(observation_times) and next_obs_time <= tf:
+                    # FOR NOW keep copying the same state if there are multiple obs times between ti and tf
+                    # This will be fixed by making sure all observation times are part of the time grid.
+                    states_at_t[:, obs_time_index, :] = state
+                    times[obs_time_index] = next_obs_time
+                    obs_time_index += 1
+                    if obs_time_index < len(observation_times):
+                        next_obs_time = observation_times[obs_time_index]
+
+            # Advance times.
+            ti = tf
+            tf += self._dt
+
+        # Convert the data to a trajectories object.
+        trajectory = np.transpose(states_at_t, (0, 2, 1))
+        return Trajectory(times, trajectory)
