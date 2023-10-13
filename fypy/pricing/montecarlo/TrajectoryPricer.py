@@ -1,5 +1,6 @@
 import numpy as np
 
+from fypy.date.Date import Date
 from fypy.pricing.montecarlo.MonteCarloEngine import Trajectory, MonteCarloEngine
 
 
@@ -23,6 +24,8 @@ class TrajectoryPricer:
         trajectories = engine.evolve(observation_times=obs_times[-1])
         return self.price(trajectories=trajectories)
 
+    # TODO(Nate): Really, this type of thing needs to go in an instrument definition, or at least we need to *extract*
+    #   the observation times from the instrument definition.
     def get_observation_times(self) -> np.array:
         """
         Get the observation times of the instrument. This is used to determine at which points in the trajectory the

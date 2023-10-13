@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import numpy as np
 
 from fypy.pricing.montecarlo.StochasticProcess import StochasticProcess
@@ -32,14 +34,43 @@ class Trajectory:
         """
         return self._states[i, :, :]
 
+    def get_states_at_time(self, time: float):
+        # Find the first time greater than or equal to the time
+        idx = np.searchsorted(self._times, time, side='left')
+        return self._states[:, :, idx]
+
+
+class AdditionalState:
+    """
+    Class that can observe the state of stochastic variables at every time slice, and evolve additional states, which
+    can be recovered at the end of the simulation, and used for pricing.
+    """
+
+    @abstractmethod
+    def evolve(self, last_state: np.array, current_state: np.array, ti: float, tf: float, N: int):
+        """
+        Given the last state, the current state, and the times, evolve the additional state.
+        """
+        raise NotImplementedError
+
 
 class MonteCarloEngine:
     """
     A simple monte carlo for fast testing.
     """
 
-    def __init__(self, stochastic_process: StochasticProcess, n_paths: int = 1000, dt: float = 1. / 365.25):
+    def __init__(self,
+                 stochastic_process: StochasticProcess,
+                 n_paths: int = 1000,
+                 dt: float = 1. / 365.25,
+                 additional_state: AdditionalState = None):
         self._stochastic_process = stochastic_process
+
+        # An additional state that only depends on the history of the state of the stochastic process at each time,
+        # and not on the random variables. This is useful for pricing instruments that depend on the history of the
+        # state of the stochastic process, but not on the random variables.
+        self._additional_state = additional_state
+
         self._n_paths = n_paths
         self._dt = dt
 
@@ -111,7 +142,13 @@ class MonteCarloEngine:
         times[0] = ti  # Save the initial time
         states_at_t[:, 0, :] = state
         for n in range(n_steps):
-            state = self._stochastic_process.evolve(state, ti, tf, self._n_paths, rvs[n])
+            new_state = self._stochastic_process.evolve(state, ti, tf, self._n_paths, rvs[n])
+
+            # If there is an additional state, evolve that too.
+            if self._additional_state:
+                self._additional_state.evolve(state, new_state, ti, tf, self._n_paths)
+
+            state = new_state
             # Save the state.
             if self._save_full_trajectory:
                 states_at_t[:, n + 1, :] = state
