@@ -1,8 +1,9 @@
 from abc import abstractmethod
+from typing import List, Optional
 
 import numpy as np
 
-from fypy.pricing.montecarlo.StochasticProcess import StochasticProcess
+from fypy.pricing.montecarlo.StochasticProcess import StochasticProcess, RandomVariable
 
 
 class Trajectory:
@@ -47,11 +48,61 @@ class AdditionalState:
     """
 
     @abstractmethod
+    def initialize(self, initial_state: np.array, N: int, t0: float):
+        """
+        Initialize any additional state variables from the visible state.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def evolve(self, last_state: np.array, current_state: np.array, ti: float, tf: float, N: int):
         """
         Given the last state, the current state, and the times, evolve the additional state.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def get_state(self):
+        """
+        Get the additional state.
+        """
+        raise NotImplementedError
+
+
+class RunningMaximum(AdditionalState):
+    """
+    Class that observes the running maximum of a stochastic process.
+    """
+
+    def __init__(self):
+        self._max = None
+
+    def initialize(self, initial_states: np.array, N: int, t0: float):
+        self._max = initial_states
+
+    def evolve(self, last_state: np.array, current_state: np.array, ti: float, tf: float, N: int):
+        self._max = np.maximum(self._max, current_state)
+
+    def get_state(self):
+        return self._max
+
+
+class RunningMinimum(AdditionalState):
+    """
+    Class that observes the running minimum of a stochastic process.
+    """
+
+    def __init__(self):
+        self._min = None
+
+    def initialize(self, initial_state: np.array, t0: float):
+        self._min = initial_state
+
+    def evolve(self, last_state: np.array, current_state: np.array, ti: float, tf: float, N: int):
+        self._min = np.minimum(self._min, current_state, out=current_state)
+
+    def get_state(self):
+        return self._min
 
 
 class MonteCarloEngine:
@@ -63,18 +114,32 @@ class MonteCarloEngine:
                  stochastic_process: StochasticProcess,
                  n_paths: int = 1000,
                  dt: float = 1. / 365.25,
-                 additional_state: AdditionalState = None):
+                 additional_states: Optional[List[AdditionalState]] = None):
         self._stochastic_process = stochastic_process
 
-        # An additional state that only depends on the history of the state of the stochastic process at each time,
+        # Any additional states that only depends on the history of the state of the stochastic process at each time,
         # and not on the random variables. This is useful for pricing instruments that depend on the history of the
         # state of the stochastic process, but not on the random variables.
-        self._additional_state = additional_state
+        self._additional_states = additional_states
 
         self._n_paths = n_paths
         self._dt = dt
 
         self._save_full_trajectory = False
+
+    def get_additional_states(self) -> Optional[List[AdditionalState]]:
+        """
+        Get the additional states.
+        """
+        return self._additional_states
+
+    def add_additional_state(self, additional_state: AdditionalState):
+        """
+        Add an additional state to the monte carlo engine.
+        """
+        if self._additional_states is None:
+            self._additional_states = []
+        self._additional_states.append(additional_state)
 
     def set_save_full_trajectory(self, save_full_trajectory: bool):
         """
@@ -107,13 +172,9 @@ class MonteCarloEngine:
         t1 = observation_times[-1]
 
         rv_description = self._stochastic_process.describe_rvs()
-        n_rvs = len(rv_description)
 
         # Number of steps to take
         n_steps = int((t1 - t0) / self._dt) + 1
-
-        # Right now we only support normal random variables. Pre-generate all the random variables here.
-        rvs = np.random.normal(size=(n_steps, self._n_paths, n_rvs))
 
         state_size = self._stochastic_process.state_size()
         # Initialize the states array.
@@ -136,17 +197,25 @@ class MonteCarloEngine:
             raise ValueError(
                 f"Initial state has incorrect shape, expected: {(self._n_paths, state_size)}, got: {check_shape}")
 
+        # Initialize any additional states
+        if self._additional_states:
+            for additional_state in self._additional_states:
+                additional_state.initialize(state, self._n_paths, t0)
+
         # Keep track of what the next observation time is.
         next_obs_time = observation_times[1]
         obs_time_index = 1  # We always save the initial state.
         times[0] = ti  # Save the initial time
         states_at_t[:, 0, :] = state
         for n in range(n_steps):
-            new_state = self._stochastic_process.evolve(state, ti, tf, self._n_paths, rvs[n])
+            # Get or generate new random variables, uses as the random input for state evolution.
+            rvs = self._generate_rvs(rv_description)
+            new_state = self._stochastic_process.evolve(state, ti, tf, self._n_paths, rvs)
 
             # If there is an additional state, evolve that too.
-            if self._additional_state:
-                self._additional_state.evolve(state, new_state, ti, tf, self._n_paths)
+            if self._additional_states:
+                for additional_state in self._additional_states:
+                    additional_state.evolve(state, new_state, ti, tf, self._n_paths)
 
             state = new_state
             # Save the state.
@@ -172,3 +241,11 @@ class MonteCarloEngine:
         # Convert the data to a trajectories object.
         trajectory = np.transpose(states_at_t, (0, 2, 1))
         return Trajectory(times, trajectory)
+
+    def _generate_rvs(self, rv_description: List[RandomVariable]) -> np.array:
+        n_rvs = len(rv_description)
+
+        # Right now we only support normal random variables. Pre-generate all the random variables here.
+        rvs = np.random.normal(size=(self._n_paths, n_rvs))
+
+        return rvs
