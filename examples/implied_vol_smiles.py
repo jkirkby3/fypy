@@ -4,6 +4,7 @@ This example shows how to compare implied volatility smiles for multiple models
 from fypy.pricing.fourier.ProjEuropeanPricer import ProjEuropeanPricer
 from fypy.model.levy.BlackScholes import *
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
+from fypy.termstructures.EquityForward import EquityForward
 from fypy.volatility.implied.ImpliedVolCalculator import ImpliedVolCalculator_Black76
 from fypy.model.levy import *
 from fypy.model.sv.Heston import Heston
@@ -34,7 +35,7 @@ models = {
     'CGMY': CMGY(C=0.05, G=4, M=10, Y=1.3, forwardCurve=fwd, discountCurve=disc_curve),
     'MJD': MertonJD(sigma=0.15, lam=0.3, muj=-0.2, sigj=0.3, forwardCurve=fwd, discountCurve=disc_curve),
     'KDE': KouJD(sigma=0.14, lam=2., p_up=0.3, eta1=20, eta2=15, forwardCurve=fwd, discountCurve=disc_curve),
-    'BSM': BlackScholes(sigma=0.2, forwardCurve=fwd),
+    'BSM': BlackScholes(sigma=0.2, forwardCurve=fwd, discountCurve=disc_curve),
     'Hes': Heston(v_0=0.04, theta=0.04, kappa=0.1, sigma_v=0.5, rho=-0.5, forwardCurve=fwd, discountCurve=disc_curve),
     'Bates': Bates(v_0=0.04, theta=0.04, kappa=0.1, sigma_v=0.5, rho=-0.5, lam=0.15, muj=-0.1, sigj=0.3,
                    forwardCurve=fwd, discountCurve=disc_curve),
