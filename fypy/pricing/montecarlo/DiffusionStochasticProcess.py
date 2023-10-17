@@ -80,3 +80,82 @@ class BlackScholesDiffusion1D(Diffusion1D):
 
     def num_params(self) -> int:
         return 2
+
+
+class HestonSLV(StochasticProcess):
+    """
+    Heston model as a stochastic process
+    """
+
+    def __init__(self,
+                 S0: float,
+                 r: float,
+                 v_0: float = 0.04,
+                 theta: float = 0.04,
+                 kappa: float = 2.,
+                 sigma_v: float = 0.3,
+                 rho: float = -0.6):
+        super().__init__()
+        self._S0 = S0
+
+        self._r = r
+        self._v0 = v_0
+        self._theta = theta
+        self._rho = rho
+        self._kappa = kappa
+        self._xi = sigma_v
+
+    def _mu_dt(self, state: np.array, t: float, dt: float) -> np.array:
+        """
+        Drift terms for the spot and vol processes
+        """
+        S = state[:, 0]
+        v = state[:, 1]
+        return np.array([self._r * S * dt, self._kappa * (self._theta - v) * dt]).transpose()
+
+    def _sigma_dt(self, state: np.array, t: float, dt: float) -> np.array:
+        """
+        Diffusion terms for the spot and vol processes
+        """
+        S = state[:, 0]
+        var = state[:, 1]
+        vol = np.sqrt(var)
+        sqdt = np.sqrt(dt)
+        return np.array([vol * S * sqdt, self._xi * vol * sqdt]).transpose()
+
+    def _correlate(self, dZ: np.array) -> np.array:
+        """
+        Correlate the random variables so the correlation matches the Heston model parameter.
+        """
+        dW = dZ[:, 0]
+        dZ = dZ[:, 1]
+        return np.array([dW, self._rho * dW + np.sqrt(1 - self._rho ** 2) * dZ]).transpose()
+
+    def evolve(self, state: np.array, t0: float, t1: float, N: int, dZ: np.array):
+        """
+        Evolve the process from x0 to x1 using the supplied random variables.
+            dS_t = r * S_t * dt + sqrt(v) * S_t * dW(t)
+            dv_t = kappa (theta - v_t) dt + xi sqrt(v_t) * dZ
+        """
+        dt = t1 - t0
+        dZ = self._correlate(dZ)
+        dS = self._mu_dt(state, t0, dt) + self._sigma_dt(state, t0, dt) * dZ
+        return state + dS
+
+    def state_size(self) -> int:
+        """
+        Two state variables: spot and vol.
+        """
+        return 2
+
+    def generate_initial_state(self, N: int) -> np.array:
+        """
+        The initial state is just S0.
+        """
+        return np.full(shape=(N, 2), fill_value=(self._S0, self._v0))
+
+    def describe_rvs(self) -> List[RandomVariable]:
+        """
+        Two variables needed: dW1 and dW2
+        """
+        return [RandomVariable.NORMAL, RandomVariable.NORMAL]

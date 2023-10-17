@@ -35,6 +35,12 @@ class Trajectory:
         """
         return self._states[i, :, :]
 
+    def get_state_trajectory_index(self, i: int, state_index: int) -> np.array:
+        """
+        Get a single trajectory.
+        """
+        return self._states[i, state_index, :]
+
     def get_states_at_time(self, time: float):
         # Find the first time greater than or equal to the time
         idx = np.searchsorted(self._times, time, side='left')
@@ -95,7 +101,7 @@ class RunningMinimum(AdditionalState):
     def __init__(self):
         self._min = None
 
-    def initialize(self, initial_state: np.array, t0: float):
+    def initialize(self, initial_state: np.array, N: int, t0: float):
         self._min = initial_state
 
     def evolve(self, last_state: np.array, current_state: np.array, ti: float, tf: float, N: int):
@@ -103,6 +109,23 @@ class RunningMinimum(AdditionalState):
 
     def get_state(self):
         return self._min
+
+
+class RealizedVol(AdditionalState):
+    def __init__(self):
+        self._var = None
+        self._N = None
+
+    def initialize(self, initial_state: np.array, N: int, t0: float):
+        self._var = np.zeros_like(initial_state)
+        self._N = 0
+
+    def evolve(self, last_state: np.array, current_state: np.array, ti: float, tf: float, N: int):
+        self._var += (current_state - last_state) ** 2
+        self._N += 1
+
+    def get_state(self):
+        return np.sqrt(self._var / self._N)
 
 
 class MonteCarloEngine:
