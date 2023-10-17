@@ -61,7 +61,7 @@ You can check the latest sources with the command
 
 You can run the full test suite with this command,
 
-    python -m unittest discover -s test -p '*_test.py'
+    python tests/test_runner.py
 
     
 
