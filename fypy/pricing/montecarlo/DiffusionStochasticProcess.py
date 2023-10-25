@@ -21,7 +21,7 @@ class DiffusionStochasticProcess(StochasticProcess):
         self._S0 = S0
         self._diffusion = diffusion
 
-    def evolve(self, state: np.array, t0: float, t1: float, N: int, dZ: np.array):
+    def evolve(self, state: np.ndarray, t0: float, t1: float, N: int, dZ: np.ndarray):
         """
         Evolve the process from x0 to x1 using the supplied random variables.
             dS(t) = mu(S,t)*dt + sigma(S,t)*dW(t)
@@ -61,21 +61,22 @@ class BlackScholesDiffusion1D(Diffusion1D):
     A Diffusion1D that recreates the Black-Scholes diffusion model of lognormal diffusion.
     """
 
-    def __init__(self, r: float, sigma: float):
-        self._r = r
+    def __init__(self, r: float, sigma: float, q: float = 0):
+        self._mu = r - q
+        self._q = q
         self._sigma = sigma
 
     def mu_dt(self, S: Union[float, np.ndarray], t: float, dt: float = 0.) -> Union[float, np.ndarray]:
-        return self._r * S * dt
+        return self._mu * S * dt
 
     def sigma_dt(self, S: Union[float, np.ndarray], t: float, dt: float = 0.) -> Union[float, np.ndarray]:
         return self._sigma * S * np.sqrt(dt)
 
     def get_params(self) -> np.ndarray:
-        return np.array([self._r, self._sigma])
+        return np.array([self._mu, self._sigma])
 
     def set_params(self, params: np.ndarray):
-        self._r = params[0]
+        self._mu = params[0] - self._q
         self._sigma = params[1]
 
     def num_params(self) -> int:
@@ -105,7 +106,7 @@ class HestonSLV(StochasticProcess):
         self._kappa = kappa
         self._xi = sigma_v
 
-    def _mu_dt(self, state: np.array, t: float, dt: float) -> np.array:
+    def _mu_dt(self, state: np.ndarray, t: float, dt: float) -> np.ndarray:
         """
         Drift terms for the spot and vol processes
         """
@@ -113,7 +114,7 @@ class HestonSLV(StochasticProcess):
         v = state[:, 1]
         return np.array([self._r * S * dt, self._kappa * (self._theta - v) * dt]).transpose()
 
-    def _sigma_dt(self, state: np.array, t: float, dt: float) -> np.array:
+    def _sigma_dt(self, state: np.ndarray, t: float, dt: float) -> np.ndarray:
         """
         Diffusion terms for the spot and vol processes
         """
@@ -123,7 +124,7 @@ class HestonSLV(StochasticProcess):
         sqdt = np.sqrt(dt)
         return np.array([vol * S * sqdt, self._xi * vol * sqdt]).transpose()
 
-    def _correlate(self, dZ: np.array) -> np.array:
+    def _correlate(self, dZ: np.ndarray) -> np.array:
         """
         Correlate the random variables so the correlation matches the Heston model parameter.
         """

@@ -13,7 +13,7 @@ class StochasticProcess:
     def __init__(self):
         pass
 
-    def evolve(self, state: np.array, t0: float, t1: float, N: int, dZ: np.array):
+    def evolve(self, state: np.ndarray, t0: float, t1: float, N: int, dZ: np.ndarray):
         """
         Evolve the process from x0 to x1 using the supplied random variables.
         :param state: np.array, the current state of the process, shape (N, self.state_size())
