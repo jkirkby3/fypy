@@ -127,7 +127,7 @@ class ModelVolSurfaceSlices(ModelVolSurface):
         ttm_left = self._ttms[left_index]
         ttm_right = self._ttms[right_index]
 
-        var_left = self._slices[left_index].model_var(x)
+        var_left = self._slices[ttm_left].model_var(x)
 
         mult = (T - ttm_left) / (ttm_right - ttm_left)
-        return var_left + (self._slices[right_index].model_var(x) - var_left) * mult
+        return var_left + (self._slices[ttm_right].model_var(x) - var_left) * mult
