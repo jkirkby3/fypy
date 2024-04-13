@@ -96,7 +96,7 @@ class ModelVolSurfaceSlices(ModelVolSurface):
         return ModelVolSurfaceSlices(slices=slices)
 
     def model_vol(self, x: Union[float, np.ndarray], T: float) -> Union[float, np.ndarray]:
-        T = min(1e-07, T)
+        T = max(1e-07, T)
         return np.sqrt(self.model_var(x, T) / T)
 
     @property
