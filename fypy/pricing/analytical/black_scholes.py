@@ -97,7 +97,7 @@ def black76_delta(F: float,
     :return: float or np.ndarray, same shape as strikes
     """
     vol_st = vol * np.sqrt(T)
-    phi = 1 if is_call else 0
+    phi = 1 if is_call else -1
     d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
     delta = phi * norm.cdf(phi * d_1)
     if is_fwd_delta:
