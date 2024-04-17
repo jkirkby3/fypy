@@ -3,7 +3,7 @@ About: contains pricing/Greeks formulas for black-scholes and black76
 """
 import numpy as np
 from scipy.stats import norm
-from typing import Union
+from typing import Union, Optional
 
 
 def black76_price(F: float,
