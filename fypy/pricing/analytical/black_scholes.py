@@ -3,7 +3,7 @@ About: contains pricing/Greeks formulas for black-scholes and black76
 """
 import numpy as np
 from scipy.stats import norm
-from typing import Union
+from typing import Union, Optional
 
 
 def black76_price(F: float,
@@ -123,25 +123,53 @@ def black76_delta(F: float,
                   K: Union[float, np.ndarray],
                   is_call: bool,
                   vol: Union[float, np.ndarray],
-                  disc: float,
-                  T: float) -> Union[float, np.ndarray]:
+                  T: float,
+                  div_disc: Optional[float] = 1.0,
+                  is_fwd_delta: bool = False) -> Union[float, np.ndarray]:
     """
     Delta for strikes of a common parity (ie only call or put).
     :param F: float, forward price
     :param K: float or array, the Strike(s)
     :param is_call: bool, determines if ALL strikes are call or all are put
     :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
-    :param disc: float, the discount factor, e.g. 0.99
     :param T: float, time to maturity of option
+    :param div_disc: float, the dividend discount factor, e.g. 0.99 = exp(-q*T)
+    :param is_fwd_delta: bool, if true its a delta w.r.t. forward, else it's w.r.t. spot
     :return: float or np.ndarray, same shape as strikes
     """
     vol_st = vol * np.sqrt(T)
+    phi = 1 if is_call else -1
     d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
-    delta = norm.cdf(d_1)
-    if not is_call:
-        delta -= 1.0
+    delta = phi * norm.cdf(phi * d_1)
+    if is_fwd_delta:
+        delta *= div_disc
+    return delta
 
-    return disc * delta
+
+def black76_strike_from_delta(F: float,
+                              delta: Union[float, np.ndarray],
+                              is_call: bool,
+                              vol: Union[float, np.ndarray],
+                              T: float,
+                              div_disc: Optional[float] = 1.0,
+                              is_fwd_delta: bool = False
+                              ) -> Union[float, np.ndarray]:
+    """
+    Strike(s) corresponding to delta(s) of a common parity (ie only call or put).
+    :param F: float, forward price
+    :param delta: float or array, the deltas(s)
+    :param is_call: bool, determines if ALL strikes are call or all are put
+    :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
+    :param T: float, time to maturity of option
+    :param div_disc: float, the dividend discount factor, e.g. 0.99 = exp(-q*T)
+    :param is_fwd_delta: bool, if true its a delta w.r.t. forward, else it's w.r.t. spot
+    :return: float or np.ndarray, same shape as strikes
+    """
+    phi = 1 if is_call else -1
+    vol_st = vol * np.sqrt(T)
+    if is_fwd_delta:
+        delta /= div_disc
+    return F * np.exp(-(vol_st * phi * norm.ppf(phi * delta) - 0.5 * vol * vol * T))
 
 
 def black_scholes_price(S: float,
