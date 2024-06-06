@@ -242,7 +242,6 @@ class ExponentialMat:
 
     def _get_Q(self, v: np.ndarray) -> np.ndarray:
         m0 = self.num_params.m0
-        Q = np.zeros((m0, m0))  # TODO: should be erase ?
         mu_vec = self._mu_func(v)
         mu_plus, mu_minus = mu_vec * (mu_vec > 0), -mu_vec * (-mu_vec > 0)
         sig2 = self._sig_func(v) ** 2
