@@ -74,6 +74,7 @@ class Printer:
             "ITALIC": "\u001b[3m",
         }
 
+    # write in the shell
     def write(
         self, text: str, color: str = "END", style: list[str] = [], indent: int = 0
     ):
@@ -86,15 +87,20 @@ class Printer:
             + self._colors_code["END"]
         )
 
+    # display title
     def write_begin(self, option_name: str):
         color = "DARKCYAN"
         msg = " Test " + option_name + " Stochastic "
         hashtag_number = 10
         len_hashtag = len(msg) + 2 * hashtag_number
-        self.write("\n\n" + len_hashtag * "#", color=color)
-        self.write(hashtag_number * "#" + msg + hashtag_number * "#", color=color)
-        self.write(len_hashtag * "#" + "\n", color=color)
+        self.write("\n\n")
+        self.write(len_hashtag * "#", color=color, indent=3)
+        self.write(
+            hashtag_number * "#" + msg + hashtag_number * "#", color=color, indent=3
+        )
+        self.write(len_hashtag * "#" + "\n\n\n", color=color, indent=3)
 
+    # write the parameters in the shell
     def write_parameters(
         self, idx_param: int, number_param_set: int, params: np.ndarray
     ):
@@ -104,6 +110,7 @@ class Printer:
             style=["BOLD"],
         )
 
+    # if sucess, green message
     def write_success(self):
         self.write(
             "-> Parameters set successfully passed the test. \n",
@@ -120,6 +127,7 @@ class Printer:
         )
 
 
+# Numeric error logger
 class ErrorLog:
     def __init__(self, number_param_set: int):
         self.number_param_set = number_param_set
@@ -159,6 +167,7 @@ class GenericTest:
     def __init__(self, option_name: str):
         self.option_name = option_name
 
+    # test function
     def test_psv(self):
         self._initialization()
         for idx_param in range(len(self.matlab.params)):
@@ -168,6 +177,7 @@ class GenericTest:
             self.printer.write_success()
         self.display_conclusion()
 
+    # test a set of params
     def _test_idx_param(self, idx_param):
 
         for tuple_index in tqdm(self.product):
@@ -175,27 +185,28 @@ class GenericTest:
             price = self._try_price(idx_param, list_index)
             self._check_error_and_type(idx_param, list_index, price)
 
-    @abstractmethod
-    def _set_product(self):
-        raise NotImplementedError
-
+    # specific option constant such as contract type, floor, etc...
     @abstractmethod
     def _set_option_constants(self):
         raise NotImplementedError
 
+    # compute the price of the option
     @abstractmethod
     def _get_price(self):
         raise NotImplementedError
 
+    # define a pricer
     @abstractmethod
     def _set_pricer(self):
         raise NotImplementedError
 
+    # count the number of option
     def _count_option(self, idx_param: int):
         self.error_log.option_number[idx_param] = np.prod(
             self.matlab.prices[idx_param].shape
         )
 
+    # try if a price can be computed, toherwize NaN
     def _try_price(self, idx_param, list_index):
         try:
             price = self._get_price(list_index)
@@ -204,6 +215,7 @@ class GenericTest:
             self.error_log.add_nan(idx_param)
         return price
 
+    # set the model, here HDKE
     def _set_model(self):
         self.model = HestonDEJumps(self.curves.fwd, self.curves.disc_curve)
 
@@ -221,6 +233,7 @@ class GenericTest:
         self._set_pricer()
         return
 
+    # initialization of all classes and constants
     def _initialization(self):
         use_P = self.option_name == "Asian"
         is_barrier = self.option_name == "Barrier"
@@ -236,14 +249,7 @@ class GenericTest:
         self.error_log = ErrorLog(len(self.matlab.params))
         self._set_model()
 
-    def _try_price(self, idx_param, list_index):
-        try:
-            price = self._get_price(list_index)
-        except:
-            price = np.nan
-            self.error_log.add_nan(idx_param)
-        return price
-
+    # check the consistency between Python and Matlab types
     def _check_error_and_type(self, idx_param, list_index, price):
         index = tuple([idx_param] + list_index)
         if np.isnan(price) != np.isnan(self.matlab.prices[index]):

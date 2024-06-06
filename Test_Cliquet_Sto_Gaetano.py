@@ -40,7 +40,6 @@ class Test_Proj_Cliquet(unittest.TestCase, GenericTest):
         self.contract = 3
         return
 
-    # to be genralized
     def _set_pricer(self):
         self.pricer = ProjCliquetPricer_SV(model=self.model, N=self.pricer_params.N)
 

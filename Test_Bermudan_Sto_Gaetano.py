@@ -28,7 +28,6 @@ class Test_Proj_DVSwap(unittest.TestCase, GenericTest):
         self.contract = 1
         return
 
-    # to be genralized
     def _set_pricer(self):
         self.pricer = ProjBermudanPricer_SV(model=self.model, N=self.pricer_params.N)
 

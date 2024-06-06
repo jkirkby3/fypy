@@ -27,7 +27,6 @@ class Test_Proj_Asian(unittest.TestCase, GenericTest):
     def _set_option_constants(self):
         return
 
-    # to be genralized
     def _set_pricer(self):
         self.pricer = ProjAsianPricer_SV(
             model=self.model, P=self.pricer_params.P, Pbar=self.pricer_params.Pbar
