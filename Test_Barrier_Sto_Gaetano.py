@@ -6,7 +6,7 @@ from fypy.pricing.fourier.StochVol.ProjBarrierPricer_SV import ProjBarrierPricer
 from Test_StochVol_Helper import GenericTest
 
 
-class Test_Proj_DVSwap(unittest.TestCase, GenericTest):
+class Test_Proj_Barrier(unittest.TestCase, GenericTest):
     def __init__(self, methodName="runTest"):
         unittest.TestCase.__init__(self, methodName)
         GenericTest.__init__(self, option_name="Barrier")

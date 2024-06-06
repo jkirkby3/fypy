@@ -5,7 +5,7 @@ from fypy.pricing.fourier.StochVol.ProjBermudanPricer_SV import ProjBermudanPric
 from Test_StochVol_Helper import GenericTest
 
 
-class Test_Proj_DVSwap(unittest.TestCase, GenericTest):
+class Test_Proj_Bermudan(unittest.TestCase, GenericTest):
     def __init__(self, methodName="runTest"):
         unittest.TestCase.__init__(self, methodName)
         GenericTest.__init__(self, option_name="Bermudan")
