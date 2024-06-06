@@ -14,6 +14,7 @@ from fypy.termstructures.EquityForward import EquityForward
 from fypy.model.sv.HestonDEJumps import HestonDEJumps
 
 
+# market parameters (always the same)
 @dataclass
 class MarketParams:
     S0: float = 100
@@ -30,6 +31,7 @@ class PricerParams:
             self.N = 2**10
 
 
+# Storing curves
 class Curves:
     def __init__(self, mkt: MarketParams):
         self.disc_curve = DiscountCurve_ConstRate(rate=mkt.r)
@@ -39,6 +41,7 @@ class Curves:
         )
 
 
+# Matlab data
 class Matlab:
     def __init__(self, option_name: str, barrier: bool = False):
         self.script_dir: str = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +61,7 @@ class Matlab:
         self.params = file["params"]
 
 
+# Write in the shell
 class Printer:
     def __init__(self):
         self._colors_code = {
@@ -135,21 +139,26 @@ class ErrorLog:
         self.nan_number = {i: 0 for i in range(number_param_set)}
         self.option_number = {i: 0 for i in range(number_param_set)}
 
+    # add the error to the list
     def add_error(self, param_set_idx: int, error: float):
         self.errors[param_set_idx].append(error)
 
+    # count the nan
     def add_nan(self, param_set_idx: int):
         self.nan_number[param_set_idx] += 1
 
+    # Maximal error for a whole parameter set
     def get_error_max_idx(self, param_set_idx: int):
         return np.max(np.abs(self.errors[param_set_idx]))
 
+    # list of the numerical errors when testing a parameter set
     def get_error_list(self):
         error_list = []
         for i in self.errors:
             error_list.append(self.get_error_max_idx(i))
         return error_list
 
+    # build the recap table of the testing procedure
     def build_recap_df(self):
         error_list = self.get_error_list()
         data = {
@@ -225,7 +234,7 @@ class GenericTest:
         df = self.error_log.build_recap_df()
         print(df)
 
-    # update the parameters of the pricer
+    # update the parameters of the pricer when changing the set
     def _update_pricer(self, params: np.ndarray, idx_param: int):
         param = params[idx_param]
         self.printer.write_parameters(idx_param, len(params), param)
