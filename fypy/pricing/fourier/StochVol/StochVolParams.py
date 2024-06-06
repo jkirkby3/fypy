@@ -163,7 +163,7 @@ class GridParamsGeneric:
 
     def _get_var_grid_bound(
         self, model: FourierModel, T: float, gamma: float
-    ) -> tuple[float]:
+    ) -> tuple[float, float]:
         if isinstance(model, _HestonBase):
             mu_h = np.exp(-model.kappa * T) * model.v_0 + model.theta * (
                 1 - np.exp(-model.kappa * T)
@@ -242,7 +242,7 @@ class ExponentialMat:
 
     def _get_Q(self, v: np.ndarray) -> np.ndarray:
         m0 = self.num_params.m0
-        Q = np.zeros((m0, m0))
+        Q = np.zeros((m0, m0))  # TODO: should be erase ?
         mu_vec = self._mu_func(v)
         mu_plus, mu_minus = mu_vec * (mu_vec > 0), -mu_vec * (-mu_vec > 0)
         sig2 = self._sig_func(v) ** 2

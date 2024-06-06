@@ -110,20 +110,20 @@ class RecursiveReturnPricer:
         self.thet = self.thet * self.zz
         return
 
+    # TODO: refactor
     def _build_psi_col(self, sig: np.ndarray, Neta: int, j: int):
         thet = self.thet
-        self.psi[j, :] = (
-            sig[0] * (thet[0 : Neta - 19 : 5] + thet[19:Neta:5])
-            + sig[1] * (thet[1 : Neta - 18 : 5] + thet[18 : Neta - 1 : 5])
-            + sig[2] * (thet[2 : Neta - 17 : 5] + thet[17 : Neta - 2 : 5])
-            + sig[3] * (thet[3 : Neta - 16 : 5] + thet[16 : Neta - 3 : 5])
-            + sig[4] * (thet[4 : Neta - 15 : 5] + thet[15 : Neta - 4 : 5])
-            + sig[5] * (thet[5 : Neta - 14 : 5] + thet[14 : Neta - 5 : 5])
-            + sig[6] * (thet[6 : Neta - 13 : 5] + thet[13 : Neta - 6 : 5])
-            + sig[7] * (thet[7 : Neta - 12 : 5] + thet[12 : Neta - 7 : 5])
-            + sig[8] * (thet[8 : Neta - 11 : 5] + thet[11 : Neta - 8 : 5])
-            + sig[9] * (thet[9 : Neta - 10 : 5] + thet[10 : Neta - 9 : 5])
-        )
+        psi_j = []
+
+        for i in range(10):
+            psi_ji = list(
+                sig[i]
+                * (thet[i : Neta - (19 - i) : 5] + thet[(19 - i) : (Neta - i) : 5])
+            )
+            psi_j.append(psi_ji)
+
+        psi_j = np.array(psi_j).sum(axis=0)
+        self.psi[j, :] = psi_j
 
     def _PSI_computation(self, contract: int, a: float):
         if contract is None:

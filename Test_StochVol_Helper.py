@@ -201,7 +201,7 @@ class GenericTest:
 
     # compute the price of the option
     @abstractmethod
-    def _get_price(self):
+    def _get_price(self, list_index):
         raise NotImplementedError
 
     # define a pricer
