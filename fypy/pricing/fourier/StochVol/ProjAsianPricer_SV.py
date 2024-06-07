@@ -11,6 +11,7 @@ from fypy.pricing.fourier.StochVol.StochVolParams import (
     NumericalParams,
     ExponentialMat,
     AddJumpsCharacteristics,
+    TYPES,
 )
 
 from fypy.pricing.fourier.StochVol.StochVolPricer import RecursiveReturnPricer
@@ -34,9 +35,9 @@ class GridParams(GridParamsGeneric):
         Pbar: int,
     ):
         super().__init__(W, S0, N, alpha, T, M)
-        self.init_variables(P, Pbar)
+        self.init_variables(P=P, Pbar=Pbar)
 
-    def init_variables(self, P: int, Pbar: int):
+    def init_variables(self, *, P: int, Pbar: int, **kwargs):
         self.P = P
         self.Pbar = Pbar
         self.a = 2**P
@@ -66,7 +67,7 @@ class RecursivePrice(RecursiveReturnPricer):
         super().__init__(model=model, exp_mat=mat, grid=grid, num_params=num_params)
         self.transit_mat = self.exp_mat.get_exp_tensor()
 
-    def _set_left_and_NMM(self):
+    def _set_left_and_NMM(self, **kwargs):
         self._get_mum_xm_nm_vec(self.grid)
         self.leftGridPoint = self.xm[0]
         self.NNM = int(self.grid.N + self.nm_vec[self.grid.M - 2])
@@ -75,7 +76,7 @@ class RecursivePrice(RecursiveReturnPricer):
         self.zeta = self._get_zeta_vec(self.grid.a, self.grid.xi)
         self.grid.xi = self.grid.xi[1:]
         self.chf = np.sum(self.transit_mat, axis=0).T
-        self._PSI_computation(None, self.grid.a)
+        self._PSI_computation(a=self.grid.a)
         self.psi = np.vstack((np.ones(self.psi.shape[1]), self.psi))
         self.psi[-1, :] = 0
 
@@ -115,7 +116,7 @@ class RecursivePrice(RecursiveReturnPricer):
                 self.chf[:, j] += self.phi_z[:, k] * self.transit_mat[k, j, :]
 
     # µm, nm, xm vectors (equations 42 and 43)
-    def _get_mum_xm_nm_vec(self, grid: GridParams):
+    def _get_mum_xm_nm_vec(self, grid: GridParamsGeneric):
         dx = self.grid.dx
         theta = grid.dt * self._model.forwardCurve.drift(0, grid.T)
         self._get_nm_vec(theta=theta)
@@ -123,7 +124,7 @@ class RecursivePrice(RecursiveReturnPricer):
         self.mu_vec = theta + self.nm_vec * dx
         self.xm = self.mu_vec + (1 - 0.5 * self.grid.N) * dx
 
-    def _get_nm_vec(self, theta: np.ndarray):
+    def _get_nm_vec(self, theta: float):
         m_vec = np.arange(2, self.grid.M + 1)
         # if theta = 0, do tayor development
         match bool(np.abs(theta) >= 1e-8):
@@ -147,13 +148,13 @@ class ProjAsianPricer_SV:
     ####################################################
 
     # Main funtion: pricing method
-    def price(self, T: float, W: int, S0: float, M: float, is_call: bool) -> float:
+    def price(self, T: float, W: int, S0: float, M: int, is_call: bool) -> float:
         self._initialization(T, W, S0, M, is_call)
         self._recursion()
         price = self._valuation_stage()
         return price
 
-    def _initialization(self, T: float, W: int, S0: float, M: float, is_call: bool):
+    def _initialization(self, T: float, W: int, S0: float, M: int, is_call: bool):
         self._init_classes(T, W, S0, M, is_call)
         self._init_tensors()
         return
@@ -165,7 +166,7 @@ class ProjAsianPricer_SV:
         self.transit_mat = self.exp_mat.get_exp_tensor()
         self.chf = self._init_chf()
 
-    def _init_classes(self, T: float, W: int, S0: float, M: float, is_call: bool):
+    def _init_classes(self, T: float, W: int, S0: float, M: int, is_call: bool):
         self._check_call_put(is_call=is_call)
         self.num_params = NumericalParams()
         self.grid = GridParams(
@@ -231,10 +232,13 @@ class ProjAsianPricer_SV:
         return pc_price
 
     def _interp(self, val1: float, val2: float):
-        val = val1 + (val2 - val1) * (
-            self.model.v_0 - self.exp_mat.get_v()[self.j0 - 1]
-        ) / (self.exp_mat.get_v()[self.j0] - self.exp_mat.get_v()[self.j0 - 1])
-        return val
+        if isinstance(self.model, TYPES.Hes_base):
+            val = val1 + (val2 - val1) * (
+                self.model.v_0 - self.exp_mat.get_v()[self.j0 - 1]
+            ) / (self.exp_mat.get_v()[self.j0] - self.exp_mat.get_v()[self.j0 - 1])
+            return val
+        else:
+            raise NotImplementedError("Only Heston based models are implemented.")
 
     def _get_vals(self):
         disc = self.model.discountCurve.discount_T(self.grid.T)

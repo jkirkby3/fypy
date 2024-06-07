@@ -332,18 +332,23 @@ class ProjCliquetPricer_SV:
         )
 
     def _interpolation(self, contract: int, FG: float, W: float):
-        k0 = self.recursive_pricer._get_k0()
-        disc = self.model.discountCurve.discount_T(self.grid.T)
-        v0 = self.model.v_0
-        v = self.exp_mat.get_v()
-        match contract:
-            case 3:
-                val1 = self._get_val(FG, W, k0 - 1, disc)
-                val2 = self._get_val(FG, W, k0, disc)
-                price = val1 + (val2 - val1) * (v0 - v[k0 - 1]) / (v[k0] - v[k0 - 1])
-                return price
-            case _:
-                raise NotImplementedError
+        if isinstance(self.model, TYPES.Hes_base):
+            k0 = self.recursive_pricer._get_k0()
+            disc = self.model.discountCurve.discount_T(self.grid.T)
+            v0 = self.model.v_0
+            v = self.exp_mat.get_v()
+            match contract:
+                case 3:
+                    val1 = self._get_val(FG, W, k0 - 1, disc)
+                    val2 = self._get_val(FG, W, k0, disc)
+                    price = val1 + (val2 - val1) * (v0 - v[k0 - 1]) / (
+                        v[k0] - v[k0 - 1]
+                    )
+                    return price
+                case _:
+                    raise NotImplementedError
+        else:
+            raise NotImplementedError
 
     def _get_val(self, FG, W, k, disc):
         beta_temp = self._beta_computation(k)

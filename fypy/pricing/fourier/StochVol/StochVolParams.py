@@ -2,8 +2,8 @@ import numpy as np
 import scipy
 
 from dataclasses import dataclass
-from abc import abstractmethod
-from typing import Union
+from abc import abstractmethod, ABC
+from typing import Union, Any, Optional
 from fypy.model.sv.Heston import _HestonBase
 from fypy.model.sv.HestonDEJumps import HestonDEJumps
 from fypy.model.sv.Bates import Bates
@@ -60,7 +60,7 @@ class PayoffConstants:
 
 
 # TODO: definir zeta et rho comme des classes à implémenter
-class GridParamsGeneric:
+class GridParamsGeneric(ABC):
     def __init__(
         self,
         W: float,
@@ -84,9 +84,29 @@ class GridParamsGeneric:
         self.dt = T / M
         self.down = down
         self.gauss_quad = GaussianQuad()
+        # to be init later
+        self.A = 0
+        self.dx = 0
+        self.K = 0
+        self.a = 0
+        self.rho = 0
+        self.dxi = 0
+        self.xmin = 0
+        self.xbar = 0
+        self.nbar = 0
+        self.xi = np.ndarray([])
+        self.upsilon = 0
+        self.C_an = 0
+        self.klf = 0
+        self.klc = 0
+        self.lf = 0
+        self.nnot = 0
+        self.gs = np.array([])
+        self.zeta = 0
+
 
     @abstractmethod
-    def init_variables(self):
+    def init_variables(self, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
@@ -215,6 +235,7 @@ class ExponentialMat:
         m0 = self.num_params.m0
         nx = m0
         dx = (self.ux - self.lx) / nx
+        # TODO: check if model is Heston
         center = self.model.v_0
         # different gridMethod case
         match self.num_params.gridMethod:
@@ -260,7 +281,12 @@ class ExponentialMat:
                 raise NotImplementedError("Only boundMethod 1 implemented so far.")
 
     def _get_Q_non_unif(
-        self, v: np.ndarray, mu_plus: float, mu_minus: float, sig2: float, h: np.ndarray
+        self,
+        v: np.ndarray,
+        mu_plus: np.ndarray,
+        mu_minus: np.ndarray,
+        sig2: np.ndarray,
+        h: np.ndarray,
     ) -> np.ndarray:
         zeros = np.zeros(len(v) - 2)
         sub_vec = sig2[1:-1] - (h[1:] * mu_plus[1:-1] + h[:-1] * mu_minus[1:-1])
@@ -485,3 +511,4 @@ class TYPES:
     HesDE = HestonDEJumps
     Bates = Bates
     Hes = Heston
+    Hes_base = _HestonBase

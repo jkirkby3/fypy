@@ -23,7 +23,7 @@ class GridParams(GridParamsGeneric):
         super().__init__(W, S0, N, alpha, T, M)
         self.init_variables()
 
-    def init_variables(self):
+    def init_variables(self, **kwargs):
         self.dx = 2 * self.alpha / (self.N - 1)
         self.a = 1 / self.dx
         self.dt = self.T / self.M
@@ -162,7 +162,7 @@ class ProjDVSwap_SV:
                     * self.recursive_pricer.zeta
                 )
             case False:
-                self.hvec = self.zeta
+                self.hvec = self.recursive_pricer.zeta
         return
 
     def _get_val(self, k: int, grid: np.ndarray):
@@ -175,17 +175,20 @@ class ProjDVSwap_SV:
         return val
 
     def _interpolation(self, contract: int):
-        k0 = self.recursive_pricer._get_k0()
-        v0 = self.model.v_0
-        v = self.exp_mat.get_v()
-        disc = self.model.discountCurve.discount_T(self.grid.T)
-        val1, val2 = self._get_vals(contract, k0)
-        price = val1 + (val2 - val1) * (v0 - v[k0 - 1]) / (v[k0] - v[k0 - 1])
-        match contract:
-            case 3:
-                return disc * price / self.grid.T
-            case 1:
-                return price / self.grid.T
+        if isinstance(self.model, TYPES.Hes_base):
+            k0 = self.recursive_pricer._get_k0()
+            v0 = self.model.v_0
+            v = self.exp_mat.get_v()
+            disc = self.model.discountCurve.discount_T(self.grid.T)
+            val1, val2 = self._get_vals(contract, k0)
+            price = val1 + (val2 - val1) * (v0 - v[k0 - 1]) / (v[k0] - v[k0 - 1])
+            match contract:
+                case 3:
+                    return disc * price / self.grid.T
+                case 1:
+                    return price / self.grid.T
+        else:
+            raise NotImplementedError
 
     def _get_vals(self, contract, k0):
         self._adjust_xmin_interp(contract)

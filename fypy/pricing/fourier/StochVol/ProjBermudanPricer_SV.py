@@ -22,7 +22,7 @@ class GridParams(GridParamsGeneric):
         self.conditional_variables()
         self.update_and_create_variables()
 
-    def init_variables(self):
+    def init_variables(self, **kwargs):
         self.dx = self._get_dx()
         self.a = self._get_a()
         self.dxtil = self._get_dxtil()

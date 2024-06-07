@@ -1,6 +1,7 @@
 import numpy as np
 from abc import abstractmethod
 from fypy.model.FourierModel import FourierModel
+from typing import Optional, Any
 
 from fypy.pricing.fourier.StochVol.StochVolParams import (
     ExponentialMat,
@@ -93,13 +94,11 @@ class RecursiveReturnPricer:
         thet[5 * np.arange(1, Neta5 + 1) - 1] = (
             x1[0] - 1.5 * dx + dx * np.arange(Neta5) + dx * g3
         )
-
         return thet
 
     def _set_zz(self, thet: np.ndarray, a: float):
         dxi = 2 * np.pi * a / self.grid.N
         self.zz = np.exp(1j * dxi * self.grid.hlocalCF(thet))
-
         return
 
     def _set_thet(self):
@@ -125,13 +124,18 @@ class RecursiveReturnPricer:
         psi_j = np.array(psi_j).sum(axis=0)
         self.psi[j, :] = psi_j
 
-    def _PSI_computation(self, contract: int, a: float):
+    def _PSI_computation(
+        self, contract: Optional[float] = None, a: Optional[float] = None
+    ):
         if contract is None:
             self._set_left_and_NMM()
         else:
             self._set_left_and_NMM(contract)
 
-        dx = 1 / a
+        if a is not None:
+            dx = 1 / a
+        else:
+            raise ValueError("a should be a real number.")
         NNM = self.NNM  # Number of columns of PSI
         Neta = 5 * NNM + 15  # Sample size
         Neta5 = NNM + 3
@@ -161,7 +165,7 @@ class RecursiveReturnPricer:
         return
 
     @abstractmethod
-    def _set_left_and_NMM(self, contract: int = None):
+    def _set_left_and_NMM(self, **kwargs: Any):
         raise NotImplementedError
 
     @abstractmethod
