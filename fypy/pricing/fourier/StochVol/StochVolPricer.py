@@ -130,7 +130,7 @@ class RecursiveReturnPricer:
         if contract is None:
             self._set_left_and_NMM()
         else:
-            self._set_left_and_NMM(contract)
+            self._set_left_and_NMM(contract=contract)
 
         if a is not None:
             dx = 1 / a
@@ -165,7 +165,7 @@ class RecursiveReturnPricer:
         return
 
     @abstractmethod
-    def _set_left_and_NMM(self, **kwargs: Any):
+    def _set_left_and_NMM(self, *args, **kwargs: Any):
         raise NotImplementedError
 
     @abstractmethod

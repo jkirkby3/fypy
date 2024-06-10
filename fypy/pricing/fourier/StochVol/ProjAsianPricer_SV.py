@@ -323,7 +323,6 @@ class ProjAsianPricer_SV:
         raise NotImplementedError
 
     def _get_g_coef(self, k_star: int, y_star: float, S0: float, K: float, M: int):
-        self.v0
         C = S0 / (M + 1)
         Ek = np.exp(y_star + (np.arange(1, k_star + 2) - k_star) * self.grid.dx)
         D = K - C

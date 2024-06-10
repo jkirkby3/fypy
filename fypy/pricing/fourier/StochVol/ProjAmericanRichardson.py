@@ -10,7 +10,7 @@ class ProjAmericanRichardson:
         self._bermudan_pricer = ProjBermudanPricer_SV(model, N)
         return
 
-    def price(self, T: float, W: int, S0: float, M: float, is_call: bool) -> float:
+    def price(self, T: float, W: int, S0: float, M: int, is_call: bool) -> float:
         price2M = self._bermudan_pricer.price(T, W, S0, 2 * M, is_call)
         priceM = self._bermudan_pricer.price(T, W, S0, M, is_call)
         return 2 * price2M - priceM

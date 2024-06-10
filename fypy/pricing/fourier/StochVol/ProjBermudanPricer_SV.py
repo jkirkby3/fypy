@@ -64,7 +64,7 @@ class ProjBermudanPricer_SV:
         self.N = N
 
     # Main funtion: pricing method
-    def price(self, T: float, W: int, S0: float, M: float, is_call: bool) -> float:
+    def price(self, T: float, W: int, S0: float, M: int, is_call: bool) -> float:
         self._check_call_put(is_call=is_call)
         num_params = NumericalParams()
         grid = GridParams(W, S0, self.N, alpha=num_params.alpha, T=T, M=M)
@@ -195,7 +195,7 @@ class RecursivePricer(NonRecursivePriceGeneric):
             + self._ck3 / 8
         )
 
-    def _update_thet_sub3(self, j: int, idx_j: int) -> np.ndarray:
+    def _update_thet_sub3(self, j: int, idx_j: np.ndarray | int) -> np.ndarray:
         return (
             self.cont[idx_j + 1 : self.grid.K - 2, j]
             + 10 * self.cont[idx_j + 2 : self.grid.K - 1, j]

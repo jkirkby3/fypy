@@ -69,8 +69,8 @@ class GridParamsGeneric(ABC):
         alpha: float,
         T: float,
         M: int,
-        H: int = None,
-        down: bool = None,
+        H: Optional[int] = None,
+        down: Optional[bool] = None,
     ):
         # required variables
         self.W = W
@@ -103,14 +103,15 @@ class GridParamsGeneric(ABC):
         self.nnot = 0
         self.gs = np.array([])
         self.zeta = 0
-
+        self.pf_cons = PayoffConstants(self.dx, self.gauss_quad.b4, self.gauss_quad.b3)
+        self.thetM = np.ndarray([])
 
     @abstractmethod
-    def init_variables(self, **kwargs):
+    def init_variables(self, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
-    def conditional_variables(self):
+    def conditional_variables(self, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
@@ -120,9 +121,6 @@ class GridParamsGeneric(ABC):
     def _get_nnot(self):
         return int(self.K / 2)
 
-    def _get_xmin(self) -> float:
-        return (1 - self.K / 2) * self.dx
-
     def _get_xi(self):
         return self.dxi * np.arange(self.N)
 
@@ -131,9 +129,6 @@ class GridParamsGeneric(ABC):
 
     def _get_rho(self):
         return self.lws - (self.xmin + (self.nbar - 1) * self.dx)
-
-    def _get_dxtil(self):
-        return self.dx
 
     def _get_K(self):
         return int(self.N / 2)
@@ -164,7 +159,7 @@ class GridParamsGeneric(ABC):
             )
             return gs
         except:
-            pass
+            raise NotImplementedError
 
     def _get_thetM(self) -> np.ndarray:
         try:
@@ -173,9 +168,9 @@ class GridParamsGeneric(ABC):
                 self.S0 * np.exp(self.xmin + self.dx * np.arange(self.nbar - 1))
             )
             thetM[self.nbar - 1] = self.W * (0.5 - self.pf_cons.varthet_m10)
+            return thetM
         except:
-            pass
-        return thetM
+            raise ValueError
 
     #########################################
     ######## Constants for grid bounds ######
@@ -308,13 +303,13 @@ class ExponentialMat:
         Q[m0 - 1, m0 - 1] = -Q[m0 - 1, m0 - 2]
         return Q
 
-    def _mu_func(self, u: Union[np.ndarray, float]) -> Union[np.ndarray, float]:  ##
+    def _mu_func(self, u: np.ndarray) -> np.ndarray:  ##
         if isinstance(self.model, _HestonBase):
             return self.model.kappa * (self.model.theta - u)
         else:
             raise NotImplementedError("Only implemented for Heston so far.")
 
-    def _sig_func(self, u: Union[np.ndarray, float]) -> Union[np.ndarray, float]:
+    def _sig_func(self, u: np.ndarray) -> np.ndarray:
         if isinstance(self.model, _HestonBase):
             return self.model.sigma_v * u**0.5
 
@@ -441,17 +436,19 @@ class AlphaRecursiveReturn:
         self._L = L
 
     def _get_alpha_variance(self):
-        # TODO: check if Heston
-        t = self.T / 2
-        eta = self._model.kappa
-        v0 = self._model.v_0
-        theta = self._model.theta
-        mu_h = (np.exp(-eta * t) * v0 + theta * (1 - np.exp(-eta * t))) ** 0.5
-        c2 = self._model.c2_jump + (mu_h) ** 2
-        alpha = max(
-            self._L * (c2 * t + (self._model.c4_jump * self.T) ** 0.5) ** 0.5, 0.5
-        )
-        return alpha
+        if isinstance(self._model, _HestonBase):
+            t = self.T / 2
+            eta = self._model.kappa
+            v0 = self._model.v_0
+            theta = self._model.theta
+            mu_h = (np.exp(-eta * t) * v0 + theta * (1 - np.exp(-eta * t))) ** 0.5
+            c2 = self._model.c2_jump + (mu_h) ** 2
+            alpha = max(
+                self._L * (c2 * t + (self._model.c4_jump * self.T) ** 0.5) ** 0.5, 0.5
+            )
+            return alpha
+        else:
+            raise NotImplementedError
 
     def __call__(self):
         return self._get_alpha_variance()
@@ -463,43 +460,41 @@ class AddJumpsCharacteristics:
         self._add_psi_fun_cumul()
 
     def _add_psi_fun_cumul(self):
-        match type(self.model):
-            case TYPES.HesDE:
-                lam, p_up, eta1, eta2 = (
-                    self.model.lam,
-                    self.model.p_up,
-                    self.model.eta1,
-                    self.model.eta2,
-                )
-                fun = lambda xi: lam * (
-                    (1 - p_up) * eta2 / (eta2 + 1j * xi)
-                    + p_up * eta1 / (eta1 - 1j * xi)
-                    - 1
-                )
-                self.model.c2_jump = 2 * lam * p_up / (eta1**2) + 2 * lam * (
-                    1 - p_up
-                ) / (eta2**2)
-                self.model.c4_jump = 24 * lam * (p_up / eta1**4 + (1 - p_up) / eta2**4)
-                self.model.psi_J = fun
+        if isinstance(self.model, TYPES.HesDE):
+            lam, p_up, eta1, eta2 = (
+                self.model.lam,
+                self.model.p_up,
+                self.model.eta1,
+                self.model.eta2,
+            )
+            fun = lambda xi: lam * (
+                (1 - p_up) * eta2 / (eta2 + 1j * xi)
+                + p_up * eta1 / (eta1 - 1j * xi)
+                - 1
+            )
+            self.model.c2_jump = 2 * lam * p_up / (eta1**2) + 2 * lam * (1 - p_up) / (
+                eta2**2
+            )
+            self.model.c4_jump = 24 * lam * (p_up / eta1**4 + (1 - p_up) / eta2**4)
+            self.model.psi_J = fun
 
-            case TYPES.Bates:
-                lam, muj, sigj = self.model.lam, self.model.muj, self.model.sigj
-                fun = lambda xi: lam * (
-                    np.exp(1j * xi * muj - 0.5 * sigj**2 * xi**2) - 1
-                )
-                self.model.c2_jump = lam * (muj**2 + sigj**2)
-                self.model.c4_jump = lam * (
-                    muj**4 + 6 * sigj**2 * muj**2 + 3 * sigj**4 * lam
-                )
-                self.model.psi_J = fun
-            case TYPES.Hes:
-                fun = lambda xi: 0 * (np.array(xi) > 0)
-                self.model.psi_J = fun
-                self.model.c2_jump = 0
-                self.model.c4_jump = 0
+        elif isinstance(self.model, TYPES.HesDE):
+            lam, muj, sigj = self.model.lam, self.model.muj, self.model.sigj
+            fun = lambda xi: lam * (np.exp(1j * xi * muj - 0.5 * sigj**2 * xi**2) - 1)
+            self.model.c2_jump = lam * (muj**2 + sigj**2)
+            self.model.c4_jump = lam * (
+                muj**4 + 6 * sigj**2 * muj**2 + 3 * sigj**4 * lam
+            )
+            self.model.psi_J = fun
 
-            case _:
-                raise NotImplementedError("Model")
+        elif isinstance(self.model, TYPES.Hes):
+            fun = lambda xi: 0 * (np.array(xi) > 0)
+            self.model.psi_J = fun
+            self.model.c2_jump = 0
+            self.model.c4_jump = 0
+
+        else:
+            raise NotImplementedError("Model")
         return
 
     def get_model(self):

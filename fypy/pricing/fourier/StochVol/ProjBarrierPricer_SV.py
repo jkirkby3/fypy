@@ -220,16 +220,14 @@ class ProjBarrierPricer_SV:
 
     # Main funtion: pricing method
     def price(
-        self, T: float, W: int, S0: float, M: float, H: float, down: bool, is_call: bool
+        self, T: float, W: int, S0: float, M: int, H: int, down: bool, is_call: bool
     ) -> float:
         self._check_call_put(is_call=is_call)
         self.initialization(T, W, S0, M, H, down)
         price = self.recursion.recursive_price()
         return price
 
-    def initialization(
-        self, T: float, W: int, S0: float, M: float, H: float, down: bool
-    ):
+    def initialization(self, T: float, W: int, S0: float, M: int, H: int, down: bool):
         self.num_params = NumericalParams()
         self.grid = GridParams(
             W, S0, self.N, alpha=self.num_params.alpha, T=T, M=M, H=H, down=down

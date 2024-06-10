@@ -81,7 +81,7 @@ class RecursivePricer(RecursiveReturnPricer):
         grid: GridParamsGeneric,
         num_params: NumericalParams,
     ):
-        super().__init__(model, mat, grid, num_params)
+        super().__init__(model, grid, num_params, mat)
 
     def _set_left_and_NMM(self, contract: int):
         match contract:
@@ -327,8 +327,11 @@ class ProjCliquetPricer_SV:
         self.num_params = NumericalParams()
         self.grid = GridParams(K, S0, self.N, alpha, T, M, C, F, contract)
         self.exp_mat = ExponentialMat(self.grid, self.model, self.num_params, T)
+        # self.recursive_pricer = RecursivePricer(
+        #     self.model, self.grid, self.num_params, self.exp_mat
+        # )
         self.recursive_pricer = RecursivePricer(
-            self.model, self.grid, self.num_params, self.exp_mat
+            self.model, self.exp_mat, self.grid, self.num_params
         )
 
     def _interpolation(self, contract: int, FG: float, W: float):

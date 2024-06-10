@@ -50,7 +50,7 @@ class RecursivePricer(RecursiveReturnPricer):
         grid: GridParamsGeneric,
         num_params: NumericalParams,
     ):
-        super().__init__(model, mat, grid, num_params)
+        super().__init__(model, grid, num_params, mat)
 
     def _set_left_and_NMM(self, contract: int):
         match contract:
@@ -141,7 +141,7 @@ class ProjDVSwap_SV:
         self.grid = GridParams(W=K, N=self.N, alpha=alpha, T=T, M=M, S0=1)
         self.exp_mat = ExponentialMat(self.grid, self.model, self.num_params, T)
         self.recursive_pricer = RecursivePricer(
-            self.model, self.grid, self.num_params, self.exp_mat
+            self.model, self.exp_mat, self.grid, self.num_params
         )
 
     def _adjust_xmin_interp(self, contract: int):
