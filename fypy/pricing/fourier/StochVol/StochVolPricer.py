@@ -8,6 +8,7 @@ from fypy.pricing.fourier.StochVol.StochVolParams import (
     Toeplitz,
     GridParamsGeneric,
     NumericalParams,
+    TYPES,
 )
 
 
@@ -98,7 +99,10 @@ class RecursiveReturnPricer:
 
     def _set_zz(self, thet: np.ndarray, a: float):
         dxi = 2 * np.pi * a / self.grid.N
-        self.zz = np.exp(1j * dxi * self.grid.hlocalCF(thet))
+        if self.grid.hlocalCF is not None:
+            self.zz = np.exp(1j * dxi * self.grid.hlocalCF(thet))
+        else:
+            raise ValueError("The method hlocalCF should be initialized.")
         return
 
     def _set_thet(self):
@@ -109,7 +113,6 @@ class RecursiveReturnPricer:
         self.thet = self.thet * self.zz
         return
 
-    # TODO: refactor
     def _build_psi_col(self, sig: np.ndarray, Neta: int, j: int):
         thet = self.thet
         psi_j = []
@@ -182,6 +185,8 @@ class NonRecursivePriceGeneric:
         num_params: NumericalParams,
     ):
         self.mat = mat
+        if not isinstance(self.mat.model, TYPES.Hes_base):
+            raise NotImplementedError
         self.toep = toep
         self.grid = grid
         self.num_params = num_params
@@ -250,18 +255,25 @@ class NonRecursivePriceGeneric:
     def _get_k0(self) -> int:
         k0 = 2
         v = self.mat.get_v()
-        while self.mat.model.v_0 > v[k0 - 1] and k0 < self.num_params.m0:
-            k0 += 1
-        k0 -= 1
-        return k0
+        if isinstance(self.mat.model, TYPES.Hes_base):
+            while self.mat.model.v_0 > v[k0 - 1] and k0 < self.num_params.m0:
+                k0 += 1
+            k0 -= 1
+            return k0
+
+        else:
+            raise NotImplementedError
 
     def _interp_price(self) -> float:
         k0 = self._get_k0()
         v = self.mat.get_v()
         val1, val2 = self._get_val(k0)
-        price = val1 + (val2 - val1) * (self.mat.model.v_0 - v[k0 - 1]) / (
-            v[k0] - v[k0 - 1]
-        )
+        if isinstance(self.mat.model, TYPES.Hes_base):
+            price = val1 + (val2 - val1) * (self.mat.model.v_0 - v[k0 - 1]) / (
+                v[k0] - v[k0 - 1]
+            )
+        else:
+            raise NotImplementedError
         return price
 
     @abstractmethod

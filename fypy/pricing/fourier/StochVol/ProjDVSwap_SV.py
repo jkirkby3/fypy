@@ -13,7 +13,6 @@ from fypy.pricing.fourier.StochVol.StochVolParams import (
     ExponentialMat,
     AlphaRecursiveReturn,
     TYPES,
-    AddJumpsCharacteristics,
 )
 from fypy.pricing.fourier.StochVol.StochVolPricer import RecursiveReturnPricer
 
@@ -106,7 +105,7 @@ class ProjDVSwap_SV:
     def __init__(self, model: FourierModel, N: int = 2**10, L: float = 10.0):
         self.L = L
         self.N = N
-        self.model = AddJumpsCharacteristics(model).get_model()
+        self.model = model  # model
 
     def _beta_computation(self, k: int):
         beta = np.real(

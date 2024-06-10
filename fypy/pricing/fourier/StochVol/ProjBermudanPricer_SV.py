@@ -10,7 +10,6 @@ from fypy.pricing.fourier.StochVol.StochVolParams import (
     NumericalParams,
     ExponentialMat,
     PayoffConstants,
-    AddJumpsCharacteristics,
 )
 from fypy.pricing.fourier.StochVol.StochVolPricer import NonRecursivePriceGeneric
 
@@ -58,7 +57,7 @@ class GridParams(GridParamsGeneric):
 class ProjBermudanPricer_SV:
     def __init__(self, model: FourierModel, N: int = 2**11):
         self._init_constants(N)
-        self.model = AddJumpsCharacteristics(model).get_model()
+        self.model = model
 
     def _init_constants(self, N: int):
         self.N = N

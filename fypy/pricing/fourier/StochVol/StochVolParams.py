@@ -3,7 +3,7 @@ import scipy
 
 from dataclasses import dataclass
 from abc import abstractmethod, ABC
-from typing import Union, Any, Optional
+from typing import Union, Any, Optional, Callable
 from fypy.model.sv.Heston import _HestonBase
 from fypy.model.sv.HestonDEJumps import HestonDEJumps
 from fypy.model.sv.Bates import Bates
@@ -59,7 +59,6 @@ class PayoffConstants:
         self.varthet_star = self.varthet_01 + self.varthet_m10
 
 
-# TODO: definir zeta et rho comme des classes à implémenter
 class GridParamsGeneric(ABC):
     def __init__(
         self,
@@ -91,7 +90,7 @@ class GridParamsGeneric(ABC):
         self.a = 0
         self.rho = 0
         self.dxi = 0
-        self.xmin = 0
+        self.xmin: float = 0
         self.xbar = 0
         self.nbar = 0
         self.xi = np.ndarray([])
@@ -105,6 +104,7 @@ class GridParamsGeneric(ABC):
         self.zeta = 0
         self.pf_cons = PayoffConstants(self.dx, self.gauss_quad.b4, self.gauss_quad.b3)
         self.thetM = np.ndarray([])
+        self.hlocalCF: Optional[Callable] = None
 
     @abstractmethod
     def init_variables(self, *args, **kwargs):
@@ -230,8 +230,10 @@ class ExponentialMat:
         m0 = self.num_params.m0
         nx = m0
         dx = (self.ux - self.lx) / nx
-        # TODO: check if model is Heston
-        center = self.model.v_0
+        if isinstance(self.model, TYPES.Hes_base):
+            center = self.model.v_0
+        else:
+            raise NotImplementedError
         # different gridMethod case
         match self.num_params.gridMethod:
             case 1:
@@ -333,10 +335,11 @@ class ExponentialMat:
         v1 = self._get_v1(v)
         v2 = self._get_v2(v)
         Qt = self.grid.dt * Q.T
+        psi_J = self._get_psi_J()
         diags_mat = (
             self.grid.xi[:, None] @ v1[None, :]
             - (self.grid.xi.T[:, None] ** 2) @ v2[None, :]
-            + self.grid.dt * self.model.psi_J(self.grid.xi)[:, None]
+            + self.grid.dt * psi_J(self.grid.xi)[:, None]
         )
         diag_tensor = diags_to_tens(diags_mat) + Qt
         exp_diags = custom_expm(diag_tensor)
@@ -367,9 +370,27 @@ class ExponentialMat:
                 * self.model.kappa
                 / self.model.sigma_v
             )
-            return self.grid.dt * 1j * (c1 * v + c2 - self.model.psi_J(-1j))
+            psi_J = self._get_psi_J()
+            return self.grid.dt * 1j * (c1 * v + c2 - psi_J(-1j))
         else:
             raise NotImplementedError("Only implemented for Heston so far.")
+
+    def _get_psi_J(self) -> Callable:
+        if isinstance(self.model, TYPES.HesDE):
+            lam, p_up, eta1, eta2 = (
+                self.model.lam,
+                self.model.p_up,
+                self.model.eta1,
+                self.model.eta2,
+            )
+            fun = lambda xi: lam * (
+                (1 - p_up) * eta2 / (eta2 + 1j * xi)
+                + p_up * eta1 / (eta1 - 1j * xi)
+                - 1
+            )
+            return fun
+        else:
+            raise NotImplementedError
 
     def _get_v2(self, v: np.ndarray) -> np.ndarray:
         if isinstance(self.model, _HestonBase):
@@ -442,63 +463,29 @@ class AlphaRecursiveReturn:
             v0 = self._model.v_0
             theta = self._model.theta
             mu_h = (np.exp(-eta * t) * v0 + theta * (1 - np.exp(-eta * t))) ** 0.5
-            c2 = self._model.c2_jump + (mu_h) ** 2
-            alpha = max(
-                self._L * (c2 * t + (self._model.c4_jump * self.T) ** 0.5) ** 0.5, 0.5
-            )
-            return alpha
+            if isinstance(self._model, TYPES.HesDE):
+                lam, p_up, eta1, eta2 = (
+                    self._model.lam,
+                    self._model.p_up,
+                    self._model.eta1,
+                    self._model.eta2,
+                )
+                c2_jump = 2 * lam * p_up / (eta1**2) + 2 * lam * (1 - p_up) / (eta2**2)
+                c4_jump = 24 * lam * (p_up / eta1**4 + (1 - p_up) / eta2**4)
+                c2 = c2_jump + (mu_h) ** 2
+                alpha = max(
+                    self._L * (c2 * t + (c4_jump * self.T) ** 0.5) ** 0.5,
+                    0.5,
+                )
+                return alpha
+            else:
+                raise NotImplementedError("Only HKDE implemented so far.")
+
         else:
-            raise NotImplementedError
+            raise NotImplementedError("Only Heston implemented so far.")
 
     def __call__(self):
         return self._get_alpha_variance()
-
-
-class AddJumpsCharacteristics:
-    def __init__(self, model: FourierModel):
-        self.model = model
-        self._add_psi_fun_cumul()
-
-    def _add_psi_fun_cumul(self):
-        if isinstance(self.model, TYPES.HesDE):
-            lam, p_up, eta1, eta2 = (
-                self.model.lam,
-                self.model.p_up,
-                self.model.eta1,
-                self.model.eta2,
-            )
-            fun = lambda xi: lam * (
-                (1 - p_up) * eta2 / (eta2 + 1j * xi)
-                + p_up * eta1 / (eta1 - 1j * xi)
-                - 1
-            )
-            self.model.c2_jump = 2 * lam * p_up / (eta1**2) + 2 * lam * (1 - p_up) / (
-                eta2**2
-            )
-            self.model.c4_jump = 24 * lam * (p_up / eta1**4 + (1 - p_up) / eta2**4)
-            self.model.psi_J = fun
-
-        elif isinstance(self.model, TYPES.HesDE):
-            lam, muj, sigj = self.model.lam, self.model.muj, self.model.sigj
-            fun = lambda xi: lam * (np.exp(1j * xi * muj - 0.5 * sigj**2 * xi**2) - 1)
-            self.model.c2_jump = lam * (muj**2 + sigj**2)
-            self.model.c4_jump = lam * (
-                muj**4 + 6 * sigj**2 * muj**2 + 3 * sigj**4 * lam
-            )
-            self.model.psi_J = fun
-
-        elif isinstance(self.model, TYPES.Hes):
-            fun = lambda xi: 0 * (np.array(xi) > 0)
-            self.model.psi_J = fun
-            self.model.c2_jump = 0
-            self.model.c4_jump = 0
-
-        else:
-            raise NotImplementedError("Model")
-        return
-
-    def get_model(self):
-        return self.model
 
 
 @dataclass

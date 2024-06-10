@@ -3,6 +3,7 @@ import numpy as np
 # np.set_printoptions(precision=4)
 
 from fypy.model.FourierModel import FourierModel
+from fypy.termstructures.EquityForward import EquityForward
 
 
 from scipy.io import loadmat as loadmat
@@ -10,16 +11,10 @@ from fypy.pricing.fourier.StochVol.StochVolParams import (
     GridParamsGeneric,
     NumericalParams,
     ExponentialMat,
-    AddJumpsCharacteristics,
     TYPES,
 )
 
 from fypy.pricing.fourier.StochVol.StochVolPricer import RecursiveReturnPricer
-
-# TODO: check sum axis, refactor, details arguments x=x etc...
-# TODO: refactorer les self.a (doublon entre params et pricer)
-# TODO: upsilon gamma ? voir le nom et où il est défini
-# TODO: lier les coefs v aux coefs de ProjPricer et d'autres méthodes (zeta etc...)
 
 
 class GridParams(GridParamsGeneric):
@@ -141,7 +136,7 @@ class ProjAsianPricer_SV:
     def __init__(self, model: FourierModel, P: int = 2**11, Pbar: int = 2**5):
         self._init_constants(P, Pbar)
         # because jump chf is not implemented
-        self.model = AddJumpsCharacteristics(model).get_model()
+        self.model = model
 
     ####################################################
     ######## 3 steps: Init, Recursion, Valuation #######
@@ -215,13 +210,18 @@ class ProjAsianPricer_SV:
             )
         )
 
-    def _pc_price(self, val: float):
+    def _pc_price(self, val: float) -> float:
         C = self.grid.S0 / (self.grid.M + 1)
         r = -np.log(self.model.discountCurve.discount_T(self.grid.T)) / self.grid.T
-        q = -np.log(self.model.forwardCurve._divDiscount(self.grid.T)) / self.grid.T
+        if isinstance(self.model.forwardCurve, EquityForward):
+            q = -np.log(self.model.forwardCurve._divDiscount(self.grid.T)) / self.grid.T
+        else:
+            raise ValueError(
+                "Forward curve of the model should be an equity forward to have access to dividend yield."
+            )
         T = self.grid.T
         M = self.grid.M
-        pc_price = (
+        pc_price = float(
             val
             + C
             * np.exp(-r * T)

@@ -10,7 +10,6 @@ from fypy.pricing.fourier.StochVol.StochVolParams import (
     ExponentialMat,
     Toeplitz,
     PayoffConstants,
-    AddJumpsCharacteristics,
 )
 
 
@@ -47,18 +46,21 @@ class GridParams(GridParamsGeneric):
         return
 
     def conditional_variables(self):
-        if self.down:
-            self.xmin = np.log(self.H / self.S0)
-            self.nnot = int(1 - self.xmin * self.a)
-            self.dx = self.xmin / (1 - self.nnot)
-            self.a = 1 / self.dx
+        if self.H is not None:
+            if self.down:
+                self.xmin = np.log(self.H / self.S0)
+                self.nnot = int(1 - self.xmin * self.a)
+                self.dx = self.xmin / (1 - self.nnot)
+                self.a = 1 / self.dx
+            else:
+                u = np.log(self.H / self.S0)
+                self.lws = np.log(self.W / self.S0)
+                self.nnot = int(self.K - self.a * u)
+                self.dx = u / (self.K - self.nnot)
+                self.a = 1 / self.dx
+                self.xmin = u - (self.K - 1) * self.dx
         else:
-            u = np.log(self.H / self.S0)
-            self.lws = np.log(self.W / self.S0)
-            self.nnot = int(self.K - self.a * u)
-            self.dx = u / (self.K - self.nnot)
-            self.a = 1 / self.dx
-            self.xmin = u - (self.K - 1) * self.dx
+            raise ValueError("H should be initialized")
         return
 
     def update_and_create_variables(self):
@@ -68,9 +70,6 @@ class GridParams(GridParamsGeneric):
         self.dxi = self._get_dxi()
         self.xi = self._get_xi()
         self.gs = self._get_gs()
-        # payoff constants and ThetM
-        # TODO: to be moved in recursive price, or abstract method, or defined ad hoc way for both GridParams (american and barrier) but not for Generic params
-        # TODO: barrier has to have a function thetM (as presented in algo 2 of the paper) and modify the first the furst column of theta
         self.thetM = self._get_thetM()
         return
 
@@ -213,7 +212,7 @@ class RecursivePrice(NonRecursivePriceGeneric):
 class ProjBarrierPricer_SV:
     def __init__(self, model: FourierModel, N: int = 2**11):
         self._init_constants(N)
-        self.model = AddJumpsCharacteristics(model).get_model()
+        self.model = model
 
     def _init_constants(self, N: int):
         self.N = N
