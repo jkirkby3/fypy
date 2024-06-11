@@ -1,7 +1,6 @@
 import unittest
 
 from fypy.pricing.fourier.StochVol.ProjAsianPricer_SV import ProjAsianPricer_SV
-
 from Test_StochVol_Helper import GenericTest
 
 
