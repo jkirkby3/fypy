@@ -1,8 +1,6 @@
 import unittest
 
-
 from fypy.pricing.fourier.StochVol.ProjDVSwap_SV import ProjDVSwap_SV
-
 from Test_StochVol_Helper import GenericTest
 
 

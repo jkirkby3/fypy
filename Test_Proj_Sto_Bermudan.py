@@ -1,7 +1,6 @@
 import unittest
 
 from fypy.pricing.fourier.StochVol.ProjBermudanPricer_SV import ProjBermudanPricer_SV
-
 from Test_StochVol_Helper import GenericTest
 
 

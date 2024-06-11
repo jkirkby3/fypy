@@ -1,8 +1,6 @@
 import unittest
 
 from fypy.pricing.fourier.StochVol.ProjBarrierPricer_SV import ProjBarrierPricer_SV
-
-
 from Test_StochVol_Helper import GenericTest
 
 

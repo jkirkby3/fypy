@@ -5,7 +5,6 @@ import pandas as pd
 from dataclasses import dataclass
 from abc import abstractmethod
 
-import unittest
 from tqdm import tqdm
 from itertools import product
 

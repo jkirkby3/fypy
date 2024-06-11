@@ -1,9 +1,6 @@
 import unittest
 
-
 from fypy.pricing.fourier.StochVol.ProjCliquetPricer_SV import ProjCliquetPricer_SV
-
-
 from Test_StochVol_Helper import GenericTest
 
 
