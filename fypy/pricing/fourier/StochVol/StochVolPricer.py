@@ -24,13 +24,18 @@ class RecursiveReturnPricer:
         self.exp_mat = exp_mat
         self.grid = grid
         self.num_params = num_params
+        self.NNM = 0
+        self.leftGridPoint = 0
 
     def _get_k0(self) -> int:
         k0 = 2
         v = self.exp_mat.get_v()
-        while self.exp_mat.model.v_0 > v[k0 - 1] and k0 < self.num_params.m0:
-            k0 += 1
-        k0 -= 1
+        if isinstance(self._model, TYPES.Hes_base):
+            while self._model.v_0 > v[k0 - 1] and k0 < self.num_params.m0:
+                k0 += 1
+            k0 -= 1
+        else:
+            raise NotImplementedError
         return k0
 
     def _get_zeta_vec(self, a: float, xi: np.ndarray):
@@ -144,7 +149,7 @@ class RecursiveReturnPricer:
         Neta5 = NNM + 3
 
         self.thet = self._thet_computation(
-            dx=dx, x1=[self.leftGridPoint], Neta=Neta, Neta5=Neta5
+            dx=dx, x1=np.array([self.leftGridPoint]), Neta=Neta, Neta5=Neta5
         )
         sig = self._sig_computation()
         self._set_zz(self.thet, a)
