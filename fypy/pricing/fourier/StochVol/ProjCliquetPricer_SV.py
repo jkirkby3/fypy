@@ -1,6 +1,7 @@
 import numpy as np
 
 # np.set_printoptions(precision=4)
+
 from fypy.model.FourierModel import FourierModel
 
 

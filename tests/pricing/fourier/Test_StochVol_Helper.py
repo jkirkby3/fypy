@@ -44,12 +44,15 @@ class Curves:
 class Matlab:
     def __init__(self, option_name: str, barrier: bool = False):
         self.script_dir: str = os.path.dirname(os.path.abspath(__file__))
-        file_path: str = os.path.join(
+
+        file_path = os.path.join(
             self.script_dir,
-            "tests",
+            "..",
+            "..",
             "numerical_values_for_testing",
             f"{option_name}StoPrices.mat",
         )
+
         file = loadmat(file_path)
         self.prices = file["prices"]
         self.W = file["lin_W"].flatten()
