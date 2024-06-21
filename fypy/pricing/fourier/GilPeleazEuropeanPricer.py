@@ -6,7 +6,9 @@ from scipy.integrate import quad
 
 
 class GilPeleazEuropeanPricer(StrikesPricer):
-    def __init__(self, model: FourierModel, limit: int = 1000):
+    def __init__(self,
+                 model: FourierModel,
+                 limit: int = 1000):
         """
         Gil-Peleaz method for Pricing European options under a Fourier model (i.e. using ChF)
         :param model: FourierModel, model to price under
@@ -27,9 +29,7 @@ class GilPeleazEuropeanPricer(StrikesPricer):
         k = np.log(K / S0)
         chf = lambda x: self._model.chf(T=T, xi=x)
 
-        integrand1 = lambda u: np.real(
-            (np.exp(-u * k * 1j) / (u * 1j)) * chf(u - 1j) / chf(-1j)
-        )
+        integrand1 = lambda u: np.real((np.exp(-u * k * 1j) / (u * 1j)) * chf(u - 1j) / chf(-1j))
         int1 = 1 / 2 + 1 / np.pi * quad(integrand1, 1e-15, np.inf, limit=self._limit)[0]
 
         integrand2 = lambda u: np.real(np.exp(-u * k * 1j) / (u * 1j) * chf(u))
