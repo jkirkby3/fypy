@@ -26,13 +26,23 @@ This library is under active development, although the currently posted features
 - Stochastic Volatility with Jumps Model Calibration
 - SABR Model calibration
 
-## Coming Soon !
+### Contract types supported (single underlying):
+- European Options
+- Barrier Options (Single/Double barrier, and rebates)
+- Asian Options (Discrete/Continuous)
+- Discrete Variance Swaps, Variance/Volatility Options
+- Bermudan/American early-exercise Options
+- Parisian Options (Cumulative and resetting Parisian barrier options)
+- Cliquets/Equity Indexed Annuities (Additive/Multiplicative)
+- Step (Soft Barrier) Options
+- Lookback/Hindsight Options
+- Fader/Range-Accrual Options
 
-- Exotic Option Pricing - Asian, Barrier, American, Parisian, Cliquet, Variance Swaps, etc.
-- Models: Stochastic Volatility, Regime Switching, Stochastic Local Vol
+## Coming Soon !
+- More Exotic Option Pricing
+- Models: Stochastic Volatility, Stochastic Local Vol
 - Additional pricing methods, such as Mellin Series, PDE, Monte Carlo, etc.
 - Regime Switching Calibration
-- Credit model calibration 
 - Many of the exotic pricing algorithms will be translated into python from:
 https://github.com/jkirkby3/PROJ_Option_Pricing_Matlab
 
