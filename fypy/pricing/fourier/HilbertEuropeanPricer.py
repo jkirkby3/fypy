@@ -36,6 +36,8 @@ class HilbertEuropeanPricer(StrikesPricer):
         price = 0.5 * np.real(
             self._model.forwardCurve(T) * disc - K * disc + 1j * disc * H
         )
+        if not is_call:
+            price = price - (self._model.forwardCurve(T) * disc - K * disc)
         return price
 
     def _g(self, xi: np.ndarray, T: float, K: float):

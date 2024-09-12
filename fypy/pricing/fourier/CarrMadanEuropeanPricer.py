@@ -43,7 +43,7 @@ class CarrMadanEuropeanPricer(StrikesPricer):
         yp = [Cku[istrike], Cku[istrike + 1]]
         price = np.interp(logK, xp, yp)
         if not is_call:
-            price = price - self._model.forwardCurve(T) * disc - K * disc
+            price = price - (self._model.forwardCurve(T) * disc - K * disc)
         return price
 
     def _chf(self, T: float, xi: np.ndarray):
