@@ -7,15 +7,19 @@ from typing import List, Tuple, Optional, Union
 
 
 class _BilateralGammaBase(LevyModel):
-    def __init__(self,
-                 forwardCurve: ForwardCurve,
-                 discountCurve: DiscountCurve,
-                 params: np.ndarray):
+    def __init__(
+        self,
+        forwardCurve: ForwardCurve,
+        discountCurve: DiscountCurve,
+        params: np.ndarray,
+    ):
         """
         Bilateral Gamma (BG) model
         :param forwardCurve: ForwardCurve term structure
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve, params=params)
+        super().__init__(
+            forwardCurve=forwardCurve, discountCurve=discountCurve, params=params
+        )
 
     # ================
     # Model Parameters
@@ -52,7 +56,12 @@ class _BilateralGammaBase(LevyModel):
         :param T: float, time to maturity (time at which cumulants are evaluated)
         :return: Cumulants object
         """
-        alpha_p, lam_p, alpha_m, lam_m = self.alpha_p, self.lambda_p, self.alpha_m, self.lambda_m
+        alpha_p, lam_p, alpha_m, lam_m = (
+            self.alpha_p,
+            self.lambda_p,
+            self.alpha_m,
+            self.lambda_m,
+        )
 
         rn_drift = self.risk_neutral_log_drift()
 
@@ -68,21 +77,32 @@ class _BilateralGammaBase(LevyModel):
         # Using equation (2.8)
 
         def cumulant(n: int):
-            return factorial(n - 1) * (alpha_p / lam_p ** n + (-1) ** n * alpha_m / lam_m ** n)
+            return factorial(n - 1) * (
+                alpha_p / lam_p**n + (-1) ** n * alpha_m / lam_m**n
+            )
 
-        return Cumulants(T=T,
-                         rn_drift=rn_drift,
-                         c1=T * rn_drift,  # + cumulant(1)
-                         c2=T * cumulant(2),
-                         c4=T * cumulant(4))
+        return Cumulants(
+            T=T,
+            rn_drift=rn_drift,
+            c1=T * rn_drift,  # + cumulant(1)
+            c2=T * cumulant(2),
+            c4=T * cumulant(4),
+        )
 
     def convexity_correction(self) -> float:
         """
         Computes the convexity correction for the Levy model, added to log process drift to ensure
         risk neutrality
         """
-        alpha_p, lam_p, alpha_m, lam_m = self.alpha_p, self.lambda_p, self.alpha_m, self.lambda_m
-        return -np.log((lam_p / (lam_p - 1)) ** alpha_p * (lam_m / (lam_m + 1)) ** alpha_m)
+        alpha_p, lam_p, alpha_m, lam_m = (
+            self.alpha_p,
+            self.lambda_p,
+            self.alpha_m,
+            self.lambda_m,
+        )
+        return -np.log(
+            (lam_p / (lam_p - 1)) ** alpha_p * (lam_m / (lam_m + 1)) ** alpha_m
+        )
 
     def symbol(self, xi: Union[float, np.ndarray]):
         """
@@ -90,12 +110,19 @@ class _BilateralGammaBase(LevyModel):
         :param xi: np.ndarray or float, points in frequency domain
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
-        alpha_p, lam_p, alpha_m, lam_m = self.alpha_p, self.lambda_p, self.alpha_m, self.lambda_m
+        alpha_p, lam_p, alpha_m, lam_m = (
+            self.alpha_p,
+            self.lambda_p,
+            self.alpha_m,
+            self.lambda_m,
+        )
 
         rn_drift = self.risk_neutral_log_drift()
 
-        return 1j * xi * rn_drift \
-               + np.log((lam_p / (lam_p - 1j * xi)) ** alpha_p * (lam_m / (lam_m + 1j * xi)) ** alpha_m)
+        return 1j * xi * rn_drift + np.log(
+            (lam_p / (lam_p - 1j * xi)) ** alpha_p
+            * (lam_m / (lam_m + 1j * xi)) ** alpha_m
+        )
 
     # =============================
     # Calibration Interface Implementation
@@ -112,30 +139,37 @@ class _BilateralGammaBase(LevyModel):
 
 
 class BilateralGamma(_BilateralGammaBase):
-    def __init__(self,
-                 forwardCurve: ForwardCurve,
-                 discountCurve: DiscountCurve,
-                 alpha_p: float,
-                 lambda_p: float,
-                 alhpa_m: float,
-                 lambda_m: float):
+    def __init__(
+        self,
+        forwardCurve: ForwardCurve,
+        discountCurve: DiscountCurve,
+        alpha_p: float,
+        lambda_p: float,
+        alhpa_m: float,
+        lambda_m: float,
+    ):
         """
         Bilateral Gamma (BG) model
         :param forwardCurve: ForwardCurve term structure
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve,
-                         params=np.asarray([alpha_p, lambda_p, alhpa_m, lambda_m]))
+        super().__init__(
+            forwardCurve=forwardCurve,
+            discountCurve=discountCurve,
+            params=np.asarray([alpha_p, lambda_p, alhpa_m, lambda_m]),
+        )
 
 
 class BilateralGammaMotion(_BilateralGammaBase):
-    def __init__(self,
-                 forwardCurve: ForwardCurve,
-                 discountCurve: DiscountCurve,
-                 alpha_p: float,
-                 lambda_p: float,
-                 alhpa_m: float,
-                 lambda_m: float,
-                 sigma: float):
+    def __init__(
+        self,
+        forwardCurve: ForwardCurve,
+        discountCurve: DiscountCurve,
+        alpha_p: float,
+        lambda_p: float,
+        alhpa_m: float,
+        lambda_m: float,
+        sigma: float,
+    ):
         """
         Bilateral Gamma Motion (BGM) model, an extension of Bilateral Gamma model to include Brownian motion
         component, resulting in significantly better calibration and elimimation of smile kinks produced by
@@ -145,8 +179,11 @@ class BilateralGammaMotion(_BilateralGammaBase):
 
         :param forwardCurve: ForwardCurve term structure
         """
-        super().__init__(forwardCurve=forwardCurve, discountCurve=discountCurve,
-                         params=np.asarray([alpha_p, lambda_p, alhpa_m, lambda_m, sigma]))
+        super().__init__(
+            forwardCurve=forwardCurve,
+            discountCurve=discountCurve,
+            params=np.asarray([alpha_p, lambda_p, alhpa_m, lambda_m, sigma]),
+        )
 
     # ================
     # Model Parameters
@@ -167,7 +204,7 @@ class BilateralGammaMotion(_BilateralGammaBase):
         :return: Cumulants object
         """
         cumulants = super().cumulants(T)
-        cumulants.c2 += self.sigma ** 2
+        cumulants.c2 += T * self.sigma**2
 
         return cumulants
 
@@ -176,7 +213,7 @@ class BilateralGammaMotion(_BilateralGammaBase):
         Computes the convexity correction for the Levy model, added to log process drift to ensure
         risk neutrality
         """
-        return super().convexity_correction() - 0.5 * self.sigma ** 2
+        return super().convexity_correction() - 0.5 * self.sigma**2
 
     def symbol(self, xi: Union[float, np.ndarray]):
         """
@@ -184,7 +221,7 @@ class BilateralGammaMotion(_BilateralGammaBase):
         :param xi: np.ndarray or float, points in frequency domain
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
-        return super().symbol(xi=xi) - 0.5 * self.sigma ** 2 * xi * xi
+        return super().symbol(xi=xi) - 0.5 * self.sigma**2 * xi * xi
 
     # =============================
     # Calibration Interface Implementation
