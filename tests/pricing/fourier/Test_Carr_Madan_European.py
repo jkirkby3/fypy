@@ -22,28 +22,28 @@ class Test_Lewis_European(unittest.TestCase):
 
         # 1) Black Scholes
         model = BlackScholes(sigma=0.15, forwardCurve=fwd, discountCurve=disc_curve)
-        pricer = CarrMadanEuropeanPricer(model=model, N=2**8)
+        pricer = CarrMadanEuropeanPricer(model=model, N=2**20)
         price = pricer.price(T=T, K=S0, is_call=True)
 
-        self.assertAlmostEqual(price, 7.94871378854164, 13)
+        self.assertAlmostEqual(price, 7.94871378854164, 5)
 
         # 2) Variance Gamma
         model = VarianceGamma(
             sigma=0.2, theta=0.1, nu=0.85, forwardCurve=fwd, discountCurve=disc_curve
         )
-        pricer = CarrMadanEuropeanPricer(model=model, N=2**8)
+        pricer = CarrMadanEuropeanPricer(model=model, N=2**20)
         price = pricer.price(T=T, K=S0, is_call=True)
 
-        self.assertAlmostEqual(price, 10.13935062748614, 6)
+        self.assertAlmostEqual(price, 10.13935062748614, 5)
 
         # 3) NIG
         model = NIG(
             alpha=15, beta=-5, delta=0.5, forwardCurve=fwd, discountCurve=disc_curve
         )
-        pricer = CarrMadanEuropeanPricer(model=model, N=2**8)
+        pricer = CarrMadanEuropeanPricer(model=model, N=2**20)
         price = pricer.price(T=T, K=S0, is_call=True)
 
-        self.assertAlmostEqual(price, 9.63000693130414, 11)
+        self.assertAlmostEqual(price, 9.63000693130414, 5)
 
         # 4) MJD
         model = MertonJD(
@@ -54,23 +54,23 @@ class Test_Lewis_European(unittest.TestCase):
             forwardCurve=fwd,
             discountCurve=disc_curve,
         )
-        pricer = CarrMadanEuropeanPricer(model=model, N=2**8)
+        pricer = CarrMadanEuropeanPricer(model=model, N=2**20)
         price = pricer.price(T=T, K=S0, is_call=True)
 
-        self.assertAlmostEqual(price, 8.675684635426279, 11)
+        self.assertAlmostEqual(price, 8.675684635426279, 5)
 
         # 5) CGMY
         model = CMGY(forwardCurve=fwd, discountCurve=disc_curve)
-        pricer = CarrMadanEuropeanPricer(model=model, N=2**10)
+        pricer = CarrMadanEuropeanPricer(model=model, N=2**20)
         price = pricer.price(T=T, K=S0, is_call=True)
         self.assertAlmostEqual(price, 5.80222163947386, 5)
 
         # 6) Kou's Jump Diffusion
         model = KouJD(forwardCurve=fwd, discountCurve=disc_curve)
-        pricer = CarrMadanEuropeanPricer(model=model, N=2**8)
+        pricer = CarrMadanEuropeanPricer(model=model, N=2**20)
         price = pricer.price(T=T, K=S0, is_call=True)
 
-        self.assertAlmostEqual(price, 11.92430307601936, 10)
+        self.assertAlmostEqual(price, 11.92430307601936, 5)
 
 
 if __name__ == "__main__":
