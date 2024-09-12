@@ -15,7 +15,6 @@ class CarrMadanEuropeanPricer(StrikesPricer):
         self._eta = eta
         self._N = N
         self._logS0 = np.log(self._model.spot())
-        print("here")
 
     def price(self, T: float, K: float, is_call: bool):
         lam = 2 * np.pi / (self._N * self._eta)
