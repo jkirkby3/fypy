@@ -3,7 +3,6 @@ from fypy.model.FourierModel import FourierModel
 import numpy as np
 from scipy.fft import fft
 from fypy.pricing.StrikesPricer import StrikesPricer
-from scipy.interpolate import interp1d as interp1
 
 
 class CarrMadanEuropeanPricer(StrikesPricer):
