@@ -8,3 +8,4 @@ requests_cache==1.1.0
 scipy==1.11.1
 torch==2.0.1
 yfinance==0.2.26
+tqdm==4.66.1

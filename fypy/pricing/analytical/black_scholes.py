@@ -59,6 +59,76 @@ def black76_price_strikes(F: float,
     return prices
 
 
+def black76_gamma(F: float,
+                  K: Union[float, np.ndarray],
+                  vol: Union[float, np.ndarray],
+                  disc: float,
+                  T: float) -> Union[float, np.ndarray]:
+    """
+    Gamma(s) for strike(s)
+    :param F: float, forward price
+    :param K: float or array, the Strike(s)
+    :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
+    :param disc: float, the discount factor, e.g. 0.99
+    :param T: float, time to maturity of option
+    :return: float or np.ndarray, same shape as strikes
+    """
+    vol_st = vol * np.sqrt(T)
+    d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
+    return disc * norm.pdf(d_1) / (F * vol_st)
+
+
+def black76_theta(F: float,
+                  K: Union[float, np.ndarray],
+                  is_call: bool,
+                  vol: Union[float, np.ndarray],
+                  disc: float,
+                  T: float) -> Union[float, np.ndarray]:
+    """
+    Theta(s) for strike(s)
+    :param F: float, forward price
+    :param K: float or array, the Strike(s)
+    :param is_call: bool, determines if ALL strikes are call or all are put
+    :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
+    :param disc: float, the discount factor, e.g. 0.99
+    :param T: float, time to maturity of option
+    :return: float or np.ndarray, same shape as strikes
+    """
+    sqt = np.sqrt(T)
+    vol_st = vol * sqt
+    d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
+    d_2 = d_1 - vol_st
+
+    term1 = - F * disc * norm.pdf(d_1) * vol / (2 * sqt)
+    r = - np.log(disc) / T
+
+    phi = 1 if is_call else -1
+    return term1 - phi * r * K * disc * norm.cdf(phi * d_2) + phi * r * F * disc * norm.cdf(phi * d_1)
+
+
+def black76_rho(F: float,
+                K: Union[float, np.ndarray],
+                is_call: bool,
+                vol: Union[float, np.ndarray],
+                disc: float,
+                T: float) -> Union[float, np.ndarray]:
+    """
+    Rhos(s) for strike(s)
+    :param F: float, forward price
+    :param K: float or array, the Strike(s)
+    :param is_call: bool, determines if ALL strikes are call or all are put
+    :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
+    :param disc: float, the discount factor, e.g. 0.99
+    :param T: float, time to maturity of option
+    :return: float or np.ndarray, same shape as strikes
+    """
+    vol_st = vol * np.sqrt(T)
+    d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
+    d_2 = d_1 - vol_st
+    phi = 1 if is_call else -1
+    return -T * disc * phi * (F * norm.cdf(phi * d_1) - K * norm.cdf(phi * d_2))
+
+
 def black76_vega(F: float,
                  K: Union[float, np.ndarray],
                  vol: Union[float, np.ndarray],
@@ -77,6 +147,46 @@ def black76_vega(F: float,
     d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
     return disc * F * norm.pdf(d_1) * np.sqrt(T)
 
+def black76_vanna(F: float,
+                  K: Union[float, np.ndarray],
+                  vol: Union[float, np.ndarray],
+                  disc: float,
+                  T: float) -> Union[float, np.ndarray]:
+    """
+    Vanna(s) for strike(s)
+    :param F: float, forward price
+    :param K: float or array, the Strike(s)
+    :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
+    :param disc: float, the discount factor, e.g. 0.99
+    :param T: float, time to maturity of option
+    :return: float or np.ndarray, same shape as strikes
+    """
+    vol_st = vol * np.sqrt(T)
+    d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
+    d_2 = d_1 - vol_st
+    return -disc * norm.pdf(d_1) * d_2 / vol
+
+
+def black76_vomma(F: float,
+                  K: Union[float, np.ndarray],
+                  vol: Union[float, np.ndarray],
+                  disc: float,
+                  T: float) -> Union[float, np.ndarray]:
+    """
+    Vomma(s) for strike(s)
+    :param F: float, forward price
+    :param K: float or array, the Strike(s)
+    :param vol: float or array, the Volatility(ies) ... if float, all strikes get same vol, else a vol smile
+    :param disc: float, the discount factor, e.g. 0.99
+    :param T: float, time to maturity of option
+    :return: float or np.ndarray, same shape as strikes
+    """
+    sqt = np.sqrt(T)
+    vol_st = vol * sqt
+    d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
+    d_2 = d_1 - vol_st
+    vega = disc * F * norm.pdf(d_1) * sqt
+    return vega * d_1 * d_2 / vol
 
 def black76_vanna(F: float,
                   K: Union[float, np.ndarray],
@@ -141,7 +251,7 @@ def black76_delta(F: float,
     phi = 1 if is_call else -1
     d_1 = (np.log(F / K) + 0.5 * vol_st ** 2) / vol_st
     delta = phi * norm.cdf(phi * d_1)
-    if is_fwd_delta:
+    if not is_fwd_delta:
         delta *= div_disc
     return delta
 
