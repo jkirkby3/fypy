@@ -8,7 +8,7 @@ from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
 from fypy.termstructures.EquityForward import EquityForward
 
 
-class Test_Lewis_European(unittest.TestCase):
+class Test_Hilbert_European(unittest.TestCase):
 
     def test_levy_models(self):
         S0 = 100
