@@ -9,13 +9,29 @@ class CarrMadanEuropeanPricer(StrikesPricer):
     def __init__(
         self, model: FourierModel, alpha: float = 0.75, eta: float = 0.1, N: int = 2**9
     ):
+        """Carr-Madan method for Pricing European options under a Fourier model (i.e. using ChF)
+
+
+        Args:
+            model (FourierModel): FourierModel, model to price under
+            alpha (float, optional):  Defaults to 0.75.
+            eta (float, optional):  Defaults to 0.1.
+            N (int, optional):  Defaults to 2**9.
+        """
         self._model = model
-        self._alpha = alpha  # contour shift param (see Lee for recommendations)
+        self._alpha = alpha
         self._eta = eta
         self._N = N
         self._logS0 = np.log(self._model.spot())
 
-    def price(self, T: float, K: float, is_call: bool):
+    def price(self, T: float, K: float, is_call: bool) -> float:
+        """
+        Price a single strike of European option
+        :param T: float, time to maturity
+        :param K: float, strike of option
+        :param is_call: bool, indicator of if strike is call (true) or put (false)
+        :return: float, price of option
+        """
         lam = 2 * np.pi / (self._N * self._eta)
         b = self._N * lam / 2
 
@@ -41,9 +57,9 @@ class CarrMadanEuropeanPricer(StrikesPricer):
 
         xp = [ku[istrike], ku[istrike + 1]]
         yp = [Cku[istrike], Cku[istrike + 1]]
-        price = np.interp(logK, xp, yp)
+        price = float(np.interp(logK, xp, yp))
         if not is_call:
-            price = price - (self._model.forwardCurve(T) * disc - K * disc)
+            price = price - float((self._model.forwardCurve(T) * disc - K * disc))
         return price
 
     def _chf(self, T: float, xi: np.ndarray):
