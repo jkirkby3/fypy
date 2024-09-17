@@ -10,7 +10,7 @@ This library is under active development, although the currently posted features
 
 - Black-Scholes
 - Jump Diffusions: Merton, Kou (Double Exponential)
-- Levy: Variance Gamma, Normal Inverse Gaussian (NIG), CGMY/KoBoL, Bilateral Gamma
+- Levy: (VG, NIG, CGMY/KoBoL, MJD, Kou, Tempered-Stable, Bilateral Gamma, etc)
 - Stochastic Volatility: Heston
 - SVJ: Bates, Heston + Double Expo Jumps
 - SLV: SABR
