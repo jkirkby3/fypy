@@ -17,11 +17,11 @@ This library is under active development, although the currently posted features
 
 ### Pricing Methods
 - Analytical: closed form pricing when available, e.g. Black Scholes
-- Fourier: PROJ, Lewis, Gil-Peleaz
+- Fourier: PROJ (Frame Projection), Lewis, Gil-Peleaz, Carr-Madan, Hilbert Transform
 - More in progress (PDE, Monte Carlo, etc) ...
 
 ### Model Calibration
-- Levy Model Calibration (VG, NIG, CGMY, MJD, Kou, etc)
+- Levy Model Calibration (VG, NIG, CGMY, MJD, Kou, Tempered-Stable, Bilateral Gamma, etc)
 - Heston Stochastic Volatility Model Calibration
 - Stochastic Volatility with Jumps Model Calibration
 - SABR Model calibration
