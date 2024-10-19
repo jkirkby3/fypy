@@ -4,121 +4,92 @@ from scipy.fft import fft
 from fypy.model.levy.LevyModel import FourierModel
 from fypy.pricing.fourier.ProjPricer import ProjPricer, Impl, CubicImpl, LinearImpl, HaarImpl
 
-
 class ProjEuropeanPricer(ProjPricer):
     def __init__(self, model: FourierModel, N: int = 2 ** 9, L: float = 10., order: int = 3,
                  alpha_override: float = np.nan):
-        """
-        Price European options using the Frame Projection (PROJ) method of Kirkby (2015)
-
-        Ref: JL Kirkby, SIAM Journal on Financial Mathematics, 6 (1), 713-747
-
-        :param model: Fourier model
-        :param N: int (power of 2), number of basis coefficients (increase to increase accuracy)
-        :param L: float, controls gridwidth of density. A value of L = 10~14 works well... For Black-Scholes,
-            L = 6 is fine, for heavy tailed processes such as CGMY, may want a larger value to get very high accuracy
-        :param order: int, the Spline order: 0 = Haar, 1 = Linear, 2 = Quadratic, 3 = Cubic
-            Note: Cubic is preferred, the others are provided for research purposes. Only 1 and 3 are currently coded
-        :param alpha_override: float, if supplied, this overrides the rule using L to determine the gridwidth,
-            allows you to use your own rule to set grid if desired
-        """
         super().__init__(model, N, L, order, alpha_override)
-
         self._efficient_multi_strike = [1]
 
         if order not in (0, 1, 3):
             raise NotImplementedError("Only cubic, linear and Haar implemented so far")
 
-    def price_strikes_fill(self,
-                           T: float,
-                           K: np.ndarray,
-                           is_calls: np.ndarray,
-                           output: np.ndarray):
+    def price_strikes_fill(self, T: float, K: np.ndarray, is_calls: np.ndarray, output: np.ndarray):
         """
-        Price a set of set of strikes (at same time to maturity, ie one slice of a surface)
-        Override this method if given a more efficient implementation for multiple strikes.
-
-        :param T: float, time to maturity of options
-        :param K: np.array, strikes of options
-        :param is_calls: np.ndarray[bool], indicators of if strikes are calls (true) or puts (false)
-        :param output: np.ndarray[float], the output to fill in with prices, must be same size as K and is_calls
-        :return: None, this method fills in the output array, make sure its sized properly first
+        Price a set of strikes (at same time to maturity)
         """
-        S0 = self._model.spot()
-        lws_vec = np.log(K / S0)
-        max_lws = np.log(np.max(K) / S0)
+        lws_vec = np.log(K / self._model.spot())
+        max_lws = np.log(np.max(K) / self._model.spot())
 
         cumulants = self._model.cumulants(T)
-        alph = cumulants.get_truncation_heuristic(L=self._L) \
-            if np.isnan(self._alpha_override) else self._alpha_override
-
-        # Ensure that grid is wide enough to cover the strike
+        alph = cumulants.get_truncation_heuristic(L=self._L) if np.isnan(self._alpha_override) else self._alpha_override
         alph = max(alph, 1.15 * max(np.abs(lws_vec)) + cumulants.c1)
 
-        dx = 2 * alph / (self._N - 1)
-        a = 1. / dx
-        lam = cumulants.c1 - (self._N / 2 - 1) * dx
+        grid = {
+            'dx': 2 * alph / (self._N - 1),
+            'a': 1. / (2 * alph / (self._N - 1)),
+            'lam': cumulants.c1 - (self._N / 2 - 1) * (2 * alph / (self._N - 1)),
+            'cons3': None,  # Verrà popolato successivamente
+            'max_nbar': self.get_nbar(a=1. / (2 * alph / (self._N - 1)), lws=max_lws, lam=cumulants.c1 - (self._N / 2 - 1) * (2 * alph / (self._N - 1)))
+        }
 
-        max_n_bar = self.get_nbar(a=a, lws=max_lws, lam=lam)
+        impl = self._get_implementation(self._order, T, grid['max_nbar'], grid['dx'])
 
-        if self._order == 0:
-            impl = HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+        grid['cons3'] = impl.cons() * self._model.discountCurve(T) / self._N
 
-        elif self._order == 1:
-            impl = LinearImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+        option = {
+            'disc': self._model.discountCurve(T),
+            'fwd': self._model.forwardCurve(T),
+            'lws_vec': lws_vec,
+            'is_calls': is_calls,
+            'max_lws': max_lws,
+            'K': K
+        }
 
+        self.price_computation(grid, option, impl, output)
+
+    def price_computation(self, grid: dict, option: dict, impl: Impl, output: np.ndarray):
+        """
+        Compute prices for multiple strikes, handling both aligned and misaligned grids.
+        """
+
+        if len(option['K']) > 1 and self._order in self._efficient_multi_strike:
+            xmin = option['max_lws'] - (grid['max_nbar'] - 1) * grid['dx']
+            option['beta'] = ProjEuropeanPricer._beta_computation(impl=impl, xmin=xmin)
+            price_vectorized = np.vectorize(self.price_misaligned_grid, excluded=['grid', 'option', 'impl', 'output'])
         else:
-            impl = CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+            price_vectorized = np.vectorize(self.price_aligned_grid, excluded=['grid', 'option', 'impl', 'output'])
 
-        disc = self._model.discountCurve(T)
-        fwd = self._model.forwardCurve(T)
-        cons3 = impl.cons() * disc / self._N
+        price_vectorized(np.arange(0, len(option['K'])), option['K'], grid=grid, option=option, impl=impl, output=output)
 
-        # ==============
-        # Price Strikes
-        # ==============
+    def price_aligned_grid(self, index, strike, grid: dict, option: dict, impl: Impl, output: np.ndarray):
+        """
+        Price computation for aligned grid.
+        """
+        lws = option['lws_vec'][index]
+        nbar = self.get_nbar(a=grid['a'], lws=lws, lam=grid['lam'])
+        xmin = lws - (nbar - 1) * grid['dx']
+        beta = ProjEuropeanPricer._beta_computation(impl=impl, xmin=xmin)
+        coeffs = impl.coefficients(nbar=nbar, W=strike, S0=self._model.spot(), xmin=xmin)
+        price = grid['cons3'] * np.dot(beta[:len(coeffs)], coeffs)
+        if option['is_calls'][index]:
+            price += (option['fwd'] - strike) * option['disc']
+        output[index] = max(0, price)
 
-        def price_aligned_grid(index, strike):
-            lws = lws_vec[index]
-            nbar = self.get_nbar(a=a, lws=lws, lam=lam)
-            xmin = lws - (nbar - 1) * dx
+    def price_misaligned_grid(self, index, strike, grid: dict, option: dict, impl: Impl, output: np.ndarray):
+        """
+        Price computation for misaligned grid.
+        """
+        lws = option['lws_vec'][index]
+        closest_nbar = self.get_nbar(a=grid['a'], lws=lws, lam=grid['lam'])
+        xmin = lws - (closest_nbar - 1) * grid['dx']
+        rho = lws - (xmin + (closest_nbar - 1) * grid['dx'])
+        beta = ProjEuropeanPricer._beta_computation(impl=impl, xmin=xmin)
+        coeffs = impl.coefficients(nbar=closest_nbar, W=strike, S0=self._model.spot(), xmin=xmin, rho=rho, misaligned_grid=True)
+        price = grid['cons3'] * np.dot(beta[:len(coeffs)], coeffs)
+        if option['is_calls'][index]:
+            price += (option['fwd'] - strike) * option['disc']
+        output[index] = max(0, price)
 
-            beta = ProjEuropeanPricer._beta_computation(impl=impl, xmin=xmin)
-            coeffs = impl.coefficients(nbar=nbar, W=strike, S0=S0, xmin=xmin)
-
-            # price the put
-            price = cons3 * np.dot(beta[:len(coeffs)], coeffs)
-            if is_calls[index]:  # price using put-call parity
-                price += (fwd - strike) * disc
-
-            output[index] = max(0, price)
-
-        # Prices method adapted to multi-strike
-        # with Quadrature Adjustment for Grid Misalignment
-        def price_misaligned_grid(index, strike):
-            closest_nbar = self.get_nbar(a=a, lws=lws_vec[index], lam=xmin)
-            rho = lws_vec[index] - (xmin + (closest_nbar - 1) * dx)
-
-            coeffs = impl.coefficients(nbar=closest_nbar, W=strike, S0=S0, xmin=xmin, rho=rho,
-                                       misaligned_grid=True)
-
-            # price the put
-            price = cons3 * np.dot(beta[:len(coeffs)], coeffs)
-            if is_calls[index]:  # price using put-call parity
-                price += (fwd - strike) * disc
-
-            output[index] = max(0, price)
-
-        # Prices computation
-
-        if len(K) > 1 and self._order in self._efficient_multi_strike:
-            xmin = max_lws - (max_n_bar - 1) * dx
-            beta = ProjEuropeanPricer._beta_computation(impl=impl, xmin=xmin)
-            price_vectorized = np.vectorize(price_misaligned_grid)
-            price_vectorized(np.arange(0, len(K)), K)
-        else:
-            price_vectorized = np.vectorize(price_aligned_grid)
-            price_vectorized(np.arange(0, len(K)), K)
 
     @staticmethod
     def _beta_computation(impl: Impl = None, xmin: float = None):

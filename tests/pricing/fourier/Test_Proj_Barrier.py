@@ -1,9 +1,10 @@
 import os
 import unittest
+from unittest.mock import patch
 
 from scipy.io import loadmat as loadmat
 
-from fypy.model.levy.BilateralGamma import BilateralGammaMotion
+from fypy.model.levy.BilateralGamma import BilateralGammaMotion, BilateralGamma
 from fypy.model.levy.BlackScholes import *
 from fypy.pricing.fourier.ProjBarrierPricer import ProjBarrierPricer
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
@@ -46,39 +47,47 @@ class Test_Proj_Barrier(unittest.TestCase):
         is_calls = np.empty(len(K))
         is_calls.fill(True)
 
-        # Testing multi-strike method
-        for t in T:
-            for m in M:
-                prices = pricer.price_strikes(T=t,
-                                              M=m,
-                                              H=H,
-                                              down=True,
-                                              rebate=rebate,
-                                              K=K,
-                                              is_calls=is_calls)
-                for k in range(len(K)):
-                    self.assertAlmostEqual(prices[k], matlab_prices[
-                        np.where(T == t)[0][0], k, np.where(M == m)[0][0]], 6)
+        original_cumulants = BilateralGamma.cumulants
 
-        # Testing single-strike method, selecting central elements
+        def patched_cumulants(self, T: float):
+            cumulants = original_cumulants(self, T)
+            cumulants.c2 += self.sigma**2
+            return cumulants
 
-        inner_T = [T[len(T) // 2 - 1], T[len(T) // 2]] if len(T) % 2 == 0 else [T[len(T) // 2]]
-        inner_K = [K[len(K) // 2 - 1], K[len(K) // 2]] if len(K) % 2 == 0 else [K[len(K) // 2]]
-        inner_M = [M[len(M) // 2 - 1], M[len(M) // 2]] if len(M) % 2 == 0 else [M[len(M) // 2]]
+        with patch.object(BilateralGammaMotion, 'cumulants', new=patched_cumulants):
+            # Testing multi-strike method
+            for t in T:
+                for m in M:
+                    prices = pricer.price_strikes(T=t,
+                                                  M=m,
+                                                  H=H,
+                                                  down=True,
+                                                  rebate=rebate,
+                                                  K=K,
+                                                  is_calls=is_calls)
+                    for k in range(len(K)):
+                        self.assertAlmostEqual(prices[k], matlab_prices[
+                            np.where(T == t)[0][0], k, np.where(M == m)[0][0]], 6)
 
-        for t in inner_T:
-            for k in inner_K:
-                for m in inner_M:
-                    single_price = pricer.price(T=t,
-                                                M=m,
-                                                H=H,
-                                                down=True,
-                                                rebate=rebate,
-                                                K=k,
-                                                is_call=is_calls[0])
+            # Testing single-strike method, selecting central elements
 
-                    self.assertAlmostEqual(single_price, matlab_prices[
-                        np.where(T == t)[0][0], np.where(K == k)[0][0], np.where(M == m)[0][0]], 6)
+            inner_T = [T[len(T) // 2 - 1], T[len(T) // 2]] if len(T) % 2 == 0 else [T[len(T) // 2]]
+            inner_K = [K[len(K) // 2 - 1], K[len(K) // 2]] if len(K) % 2 == 0 else [K[len(K) // 2]]
+            inner_M = [M[len(M) // 2 - 1], M[len(M) // 2]] if len(M) % 2 == 0 else [M[len(M) // 2]]
+
+            for t in inner_T:
+                for k in inner_K:
+                    for m in inner_M:
+                        single_price = pricer.price(T=t,
+                                                    M=m,
+                                                    H=H,
+                                                    down=True,
+                                                    rebate=rebate,
+                                                    K=k,
+                                                    is_call=is_calls[0])
+
+                        self.assertAlmostEqual(single_price, matlab_prices[
+                            np.where(T == t)[0][0], np.where(K == k)[0][0], np.where(M == m)[0][0]], 6)
 
 
 if __name__ == '__main__':

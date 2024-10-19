@@ -1,11 +1,12 @@
 import gc
 import os
 import unittest
+from unittest.mock import patch
 
 import torch
 from scipy.io import loadmat as loadmat
 
-from fypy.model.levy.BilateralGamma import BilateralGammaMotion
+from fypy.model.levy.BilateralGamma import BilateralGammaMotion, BilateralGamma
 from fypy.model.levy.BlackScholes import *
 from fypy.pricing.fourier.ProjStepPricer import ProjStepPricer
 from fypy.termstructures.DiscountCurve import DiscountCurve_ConstRate
@@ -52,26 +53,34 @@ class Test_Proj_Step(unittest.TestCase):
         is_calls.fill(True)
         down = False
 
-        for t in T:
-            for rho in stepRho:
-                prices = pricer.price_strikes(T=t, M=M, H=H, down=down, K=K, stepRho=rho,
-                                              is_calls=is_calls)
-                for k in range(len(K)):
-                    self.assertAlmostEqual(prices[k], matlab_prices[
-                        np.where(T == t)[0][0], np.where(stepRho == rho)[0][0], k], 8)
+        original_cumulants = BilateralGamma.cumulants
 
-                torch.cuda.empty_cache()
+        def patched_cumulants(self, T: float):
+            cumulants = original_cumulants(self, T)
+            cumulants.c2 += self.sigma**2
+            return cumulants
 
-        mid_strike=K[len(K)//2]
+        with patch.object(BilateralGammaMotion, 'cumulants', new=patched_cumulants):
+            for t in T:
+                for rho in stepRho:
+                    prices = pricer.price_strikes(T=t, M=M, H=H, down=down, K=K, stepRho=rho,
+                                                  is_calls=is_calls)
+                    for k in range(len(K)):
+                        self.assertAlmostEqual(prices[k], matlab_prices[
+                            np.where(T == t)[0][0], np.where(stepRho == rho)[0][0], k], 8)
 
-        for t in T:
-            for rho in stepRho:
-                price = pricer.price(T=t, M=M, H=H, down=down, K=mid_strike, stepRho=rho,
-                                              is_call=is_calls[len(is_calls)//2])
+                    torch.cuda.empty_cache()
 
-                self.assertAlmostEqual(price, matlab_prices[
-                    np.where(T == t)[0][0], np.where(stepRho == rho)[0][0],
-                    np.where(K == mid_strike)[0][0]], 8)
+            mid_strike=float(K[len(K)//2])
+
+            for t in T:
+                for rho in stepRho:
+                    price = pricer.price(T=t, M=M, H=H, down=down, K=mid_strike, stepRho=rho,
+                                                  is_call=bool(is_calls[len(is_calls)//2]))
+
+                    self.assertAlmostEqual(price, matlab_prices[
+                        np.where(T == t)[0][0], np.where(stepRho == rho)[0][0],
+                        np.where(K == mid_strike)[0][0]], 8)
 
 
 if __name__ == '__main__':

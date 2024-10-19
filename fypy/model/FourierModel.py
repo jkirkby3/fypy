@@ -101,3 +101,11 @@ class FourierModel(Calibratable, ABC):
         """
         raise NotImplementedError
 
+    def inhomogeneous_chf(self, T: np.ndarray, xi: Union[float, np.ndarray], thetas: list[np.ndarray]) -> Union[float, np.ndarray]:
+        """
+        Time-inhomogeneous characteristic function
+        :param T: float, time to maturity
+        :param xi: np.ndarray or float, points in frequency domain
+        """
+        raise NotImplementedError
+

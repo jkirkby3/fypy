@@ -91,6 +91,17 @@ class ProjPricer(StrikesPricer):
     def _beta_computation(self):
         raise NotImplementedError
 
+    def _get_implementation(self, order:int, T:float, max_n_bar:int, dx:float):
+        """
+        Returns the appropriate implementation based on the spline order.
+        """
+        if order == 0:
+            return HaarImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+        elif order == 1:
+            return LinearImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+        else:
+            return CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+
 
 # ===================================
 # Private
@@ -123,7 +134,7 @@ class Impl(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def coefficients(self, nbar: int, W: float, S0: float, xmin: float) -> np.ndarray:
+    def coefficients(self, nbar: int, W: float, S0: float, xmin: float, rho:float=None, misaligned_grid:bool=False) -> np.ndarray:
         raise NotImplementedError
 
     @abstractmethod
@@ -164,7 +175,7 @@ class CubicImpl(Impl):
         return nbar + 1
 
     def coefficients(self,
-                     nbar: int, W: float, S0: float, xmin: float) -> np.ndarray:
+                     nbar: int, W: float, S0: float, xmin: float, rho:float=None, misaligned_grid:bool=False) -> np.ndarray:
         self.G[nbar] = W * self.g1
         self.G[nbar - 1] = W * self.g2
         self.G[nbar - 2] = W * self.g3
@@ -341,7 +352,7 @@ class HaarImpl(Impl):
         grand[0] = 1 / self.cons()
         return grand
 
-    def coefficients(self, nbar: int, W: float, S0: float, xmin: float) -> np.ndarray:
+    def coefficients(self, nbar: int, W: float, S0: float, xmin: float, rho:float=None, misaligned_grid:bool=False) -> np.ndarray:
         a = self.a
         dx = 1 / a
         self.G[nbar - 1] = W * (.5 - a * (1 - np.exp(-.5 * dx)))

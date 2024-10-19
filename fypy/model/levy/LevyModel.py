@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 from fypy.termstructures.ForwardCurve import ForwardCurve
 from fypy.termstructures.DiscountCurve import DiscountCurve
 from fypy.model.FourierModel import FourierModel
-from typing import Union
+from typing import Union, Optional, Dict
 import numpy as np
+from contextlib import contextmanager
 
 
 class LevyModel(FourierModel, ABC):
@@ -41,6 +42,8 @@ class LevyModel(FourierModel, ABC):
         """
         raise NotImplementedError
 
+
+
     @abstractmethod
     def convexity_correction(self) -> float:
         """
@@ -59,3 +62,56 @@ class LevyModel(FourierModel, ABC):
 
     def get_params(self) -> np.ndarray:
         return self._params
+
+
+    @contextmanager
+    def temporary_params(self, new_params: np.ndarray):
+        """
+        This function temporarily sets the model's parameters (`_params`) to `new_params` for the duration of the
+        context, and then automatically restores the original parameters after exiting the context.
+        This method could be used for inhomogeneous Levy models, where the model's parameters must be changed frequently.
+
+        :param new_params: np.ndarray, new set of parameters to use temporarily.
+        """
+        # Store the original parameters before modifying them
+        original_params = self.get_params()
+        try:
+            # Set the new parameters
+            self.set_params(new_params)
+            yield
+        finally:
+            # Restore the original parameters after the context is done
+            self.set_params(original_params)
+
+    def frozen_chf(self, xi: float, frozen_params: Dict[float,list]) -> complex:
+        """
+        :param xi: np.ndarray or float, points in the frequency domain
+        :param thetas: list of np.ndarray, each array represents a set of parameters
+        :param T: np.ndarray, array of time points T_j corresponding to each set of parameters.
+        :return: np.ndarray or float, the frozen characteristic function.
+        """
+        frozen_params = dict(sorted(frozen_params.items()))
+
+        frozen_factor = 1.0
+        T_previous = 0
+
+        for T, params in frozen_params.items():
+            delta_T = T - T_previous
+            T_previous = T
+
+            with self.temporary_params(params):
+                frozen_factor *= np.exp(delta_T * self.symbol(xi))
+
+        return frozen_factor
+
+    def inhomogeneous_chf(self, T: float, xi: Union[float, np.ndarray], frozen_params: Dict[float, list] = None) -> complex:
+        """
+        Time-inhomogeneous characteristic function
+        :param T: float, time to maturity
+        :param xi: np.ndarray or float, points in frequency domain
+        :param frozen_params: optional dict, parameters for the frozen characteristic function
+        """
+
+        frozen_params = frozen_params or {}
+
+        return self.chf(T=T, xi=xi) * self.frozen_chf(xi=xi, frozen_params=frozen_params) if frozen_params else self.chf( T=T, xi=xi)
