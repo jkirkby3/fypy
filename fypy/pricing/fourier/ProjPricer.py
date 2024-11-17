@@ -2,9 +2,10 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from fypy.model.levy.LevyModel import FourierModel
+from fypy.model.levy.LevyModel import FourierModel, LevyModel
 from fypy.pricing.StrikesPricer import StrikesPricer
 
+from typing import Dict
 
 class ProjPricer(StrikesPricer):
     def __init__(self,
@@ -101,6 +102,11 @@ class ProjPricer(StrikesPricer):
             return LinearImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
         else:
             return CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
+
+
+    def update_frozen_params(self, frozen_params:Dict[float,list]):
+        if isinstance(self._model,LevyModel):
+            self._model.frozen_params= frozen_params
 
 
 # ===================================

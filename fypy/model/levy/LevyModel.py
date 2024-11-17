@@ -11,7 +11,8 @@ class LevyModel(FourierModel, ABC):
     def __init__(self,
                  forwardCurve: ForwardCurve,
                  discountCurve: DiscountCurve,
-                 params: np.ndarray):
+                 params: np.ndarray,
+                 frozen_params: Dict[float,list]= None):
         """
         Base class for an exponential Levy model, which is a model for which the characteristic function is known, hence
         enabling pricing by Fourier methods. These models are defined uniquely by their Levy "symbol", which determines
@@ -23,6 +24,17 @@ class LevyModel(FourierModel, ABC):
                          forwardCurve=forwardCurve)
         self._forwardCurve = forwardCurve  # Overrides base forward
         self._params = params
+        self.frozen_params = frozen_params if frozen_params is not None else {}
+
+    @property
+    def frozen_params(self):
+        return self.__frozen_params
+
+    @frozen_params.setter
+    def frozen_params(self, frozen_params: Dict[float, list]):
+        if not isinstance(frozen_params, dict):
+            raise ValueError("frozen_params must be a dictionary")
+        self.__frozen_params = frozen_params
 
     def chf(self, T: float, xi: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
         """
@@ -31,7 +43,9 @@ class LevyModel(FourierModel, ABC):
         :param xi: np.ndarray or float, points in frequency domain
         :return: np.ndarray or float, characteristic function evaluated at input points in frequency domain
         """
-        return np.exp(T * self.symbol(xi))
+
+        return np.exp(T * self.symbol(xi)) * self.frozen_chf(xi=xi) if self.frozen_params!=None else np.exp(T * self.symbol(xi))
+
 
     @abstractmethod
     def symbol(self, xi: Union[float, np.ndarray]):
@@ -83,19 +97,18 @@ class LevyModel(FourierModel, ABC):
             # Restore the original parameters after the context is done
             self.set_params(original_params)
 
-    def frozen_chf(self, xi: float, frozen_params: Dict[float,list]) -> complex:
+    def frozen_chf(self, xi: float) -> complex:
         """
         :param xi: np.ndarray or float, points in the frequency domain
         :param thetas: list of np.ndarray, each array represents a set of parameters
         :param T: np.ndarray, array of time points T_j corresponding to each set of parameters.
         :return: np.ndarray or float, the frozen characteristic function.
         """
-        frozen_params = dict(sorted(frozen_params.items()))
 
         frozen_factor = 1.0
         T_previous = 0
 
-        for T, params in frozen_params.items():
+        for T, params in self.frozen_params.items():
             delta_T = T - T_previous
             T_previous = T
 
@@ -104,14 +117,14 @@ class LevyModel(FourierModel, ABC):
 
         return frozen_factor
 
-    def inhomogeneous_chf(self, T: float, xi: Union[float, np.ndarray], frozen_params: Dict[float, list] = None) -> complex:
-        """
-        Time-inhomogeneous characteristic function
-        :param T: float, time to maturity
-        :param xi: np.ndarray or float, points in frequency domain
-        :param frozen_params: optional dict, parameters for the frozen characteristic function
-        """
-
-        frozen_params = frozen_params or {}
-
-        return self.chf(T=T, xi=xi) * self.frozen_chf(xi=xi, frozen_params=frozen_params) if frozen_params else self.chf( T=T, xi=xi)
+    # def inhomogeneous_chf(self, T: float, xi: Union[float, np.ndarray], frozen_params: Dict[float, list] = None) -> complex:
+    #     """
+    #     Time-inhomogeneous characteristic function
+    #     :param T: float, time to maturity
+    #     :param xi: np.ndarray or float, points in frequency domain
+    #     :param frozen_params: optional dict, parameters for the frozen characteristic function
+    #     """
+    #
+    #     self._frozen_params = frozen_params or {}
+    #
+    #     return self.chf(T=T, xi=xi) * self.frozen_chf(xi=xi) if frozen_params else self.chf( T=T, xi=xi)
