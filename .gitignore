@@ -5,6 +5,9 @@
 *.idea
 *.cache
 
+#temp develop
+temp_analyse/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
