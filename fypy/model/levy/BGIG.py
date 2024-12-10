@@ -21,13 +21,17 @@ class BGIG(LevyModel):
         p_m: float = 2,
     ):
         """
-        Carr-Geman-Madan-Yor (CGMY) model.  When Y=0, this model reduces to VG
-        :param forwardCurve: ForwardCurve term structure
-        :param C: float, viewed as a measure of the overall level of activity, and influences kurtosis
-        :param G: float, rate of exponential decay on the right tail
-        :param M: float, rate of exponential decay on the left tail. Typically for equities G < M, ie the left
-            tail is then heavier than the right (more down risk)
-        :param Y: float, controls the "fine structure" of the process
+        BGIG model
+
+        Args:
+            forwardCurve (ForwardCurve): fwd
+            discountCurve (DiscountCurve): discount
+            a_p (float, optional): Defaults to 500.
+            b_p (float, optional): Defaults to 0.05.
+            p_p (float, optional): Defaults to 2.
+            a_m (float, optional): Defaults to 300.
+            b_m (float, optional): Defaults to 0.03.
+            p_m (float, optional): Defaults to 2.
         """
         super().__init__(
             forwardCurve=forwardCurve,
