@@ -83,10 +83,6 @@ class BGIG(LevyModel):
         """Model Parameter"""
         return self._params[5]
 
-    # =============================
-    # Fourier Interface Implementation
-    # =============================
-
     ####################################
     ####### CUMULANTS HELPERS ##########
     ####################################
