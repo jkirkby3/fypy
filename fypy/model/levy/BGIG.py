@@ -1,14 +1,24 @@
+"""Implementation of the BGIG model for PROJ framework"""
+
+from typing import List, Tuple, Optional, Union
+
+import numpy as np
+import scipy
+
 from fypy.model.levy.LevyModel import LevyModel
 from fypy.model.FourierModel import Cumulants
 from fypy.termstructures.ForwardCurve import ForwardCurve
 from fypy.termstructures.DiscountCurve import DiscountCurve
-import numpy as np
-from typing import List, Tuple, Optional, Union
-
-import scipy
 
 
 class BGIG(LevyModel):
+    """
+    Implementation of the BGIG model as introduced in:
+
+    The bilateral generalized inverse Gaussian process with applications
+    to financial modeling, G. AGAZZOTTI, JP. Aguilar
+    """
+
     def __init__(
         self,
         forwardCurve: ForwardCurve,
@@ -39,9 +49,9 @@ class BGIG(LevyModel):
             params=np.asarray([a_p, b_p, p_p, a_m, b_m, p_m]),
         )
 
-    # ================
-    # Model Parameters
-    # ================
+    ####################################
+    ####### MODEL  PARAMETERS ##########
+    ####################################
 
     @property
     def a_p(self) -> float:
@@ -77,35 +87,92 @@ class BGIG(LevyModel):
     # Fourier Interface Implementation
     # =============================
 
-    ###################################
-    ####### CUMULANTS HELPER ##########
-    ###################################
-    def R(self, omega: float, p: float) -> float:
+    ####################################
+    ####### CUMULANTS HELPERS ##########
+    ####################################
+
+    def ratio_bessel(self, omega: float, p: float) -> float:
+        """
+        ratio of bessel function
+
+        Args:
+            omega (float): omega
+            p (float): p params
+
+        Returns:
+            float: ratio of bessel
+        """
         return scipy.special.kv(p + 1, omega) / scipy.special.kv(p, omega)
 
-    def c1(self, omega: float, eta: float, p: float):
-        return self.R(omega, p) * eta
+    def c1(self, omega: float, eta: float, p: float) -> float:
+        """
+        cumulants of order 1 of a one sided BIG distribution
 
-    def c2(self, omega: float, eta: float, p: float):
+        Args:
+            omega (float): omega
+            eta (float): eta
+            p (float): p
+
+        Returns:
+           float: c1
+        """
+        return self.ratio_bessel(omega, p) * eta
+
+    def c2(self, omega: float, eta: float, p: float) -> float:
+        """
+        cumulants of order 2 of a one sided BIG distribution
+
+        Args:
+            omega (float): omega
+            eta (float): eta
+            p (float): p
+
+        Returns:
+           float: c2
+        """
         polynom = (
-            -(self.R(omega, p) ** 2) + (2 * (p + 1) / omega) * self.R(omega, p) + 1
+            -(self.ratio_bessel(omega, p) ** 2)
+            + (2 * (p + 1) / omega) * self.ratio_bessel(omega, p)
+            + 1
         )
         return polynom * eta**2
 
     def c3(self, omega: float, eta: float, p: float):
+        """
+        cumulants of order 3 of a one sided BIG distribution
+
+        Args:
+            omega (float): omega
+            eta (float): eta
+            p (float): p
+
+        Returns:
+           float: c3
+        """
         polynom = (
-            2 * self.R(omega, p) ** 3
-            - (6 * (p + 1) / omega) * self.R(omega, p) ** 2
-            + ((4 * (p + 1) * (p + 2) / omega**2) - 2) * self.R(omega, p)
+            2 * self.ratio_bessel(omega, p) ** 3
+            - (6 * (p + 1) / omega) * self.ratio_bessel(omega, p) ** 2
+            + ((4 * (p + 1) * (p + 2) / omega**2) - 2) * self.ratio_bessel(omega, p)
             + 2 * (p + 1) / omega
         )
         return polynom * eta**3
 
     def c4(self, omega: float, eta: float, p: float):
+        """
+        cumulants of order 4 of a one sided BIG distribution
+
+        Args:
+            omega (float): omega
+            eta (float): eta
+            p (float): p
+
+        Returns:
+           float: c4
+        """
         polynom = (
-            2 * self.R(omega, p) ** 3
-            - (6 * (p + 1) / omega) * self.R(omega, p) ** 2
-            + ((4 * (p + 1) * (p + 2) / omega**2) - 2) * self.R(omega, p)
+            2 * self.ratio_bessel(omega, p) ** 3
+            - (6 * (p + 1) / omega) * self.ratio_bessel(omega, p) ** 2
+            + ((4 * (p + 1) * (p + 2) / omega**2) - 2) * self.ratio_bessel(omega, p)
             + 2 * (p + 1) / omega
         )
         return polynom * eta**4
@@ -113,7 +180,19 @@ class BGIG(LevyModel):
     def cumulants_gen(
         self,
         order: int,
-    ):
+    ) -> float:
+        """
+        compute cumulants of order "order"
+
+        Args:
+            order (int): order of the cumulant
+
+        Raises:
+            NotImplementedError: if order > 4
+
+        Returns:
+            cumulant (float)
+        """
         a_p, b_p, p_p = self.a_p, self.b_p, self.p_p
         a_m, b_m, p_m = self.a_m, self.b_m, self.p_m
 
@@ -136,7 +215,8 @@ class BGIG(LevyModel):
 
     def cumulants(self, T: float) -> Cumulants:
         """
-        Evaluate the cumulants of the model at a given time. This is useful e.g. to figure out integration bounds etc
+        Evaluate the cumulants of the model at a given time.
+        This is useful e.g. to figure out integration bounds etc
         during pricing
         :param T: float, time to maturity (time at which cumulants are evaluated)
         :return: Cumulants object
@@ -153,7 +233,8 @@ class BGIG(LevyModel):
 
     def symbol(self, xi: Union[float, np.ndarray]):
         """
-        Levy symbol, uniquely defines Characteristic Function via: chf(T,xi) = exp(T*symbol(xi)),  for all T>=0
+        Levy symbol, uniquely defines Characteristic Function via:
+        chf(T,xi) = exp(T*symbol(xi)),  for all T>=0
         :param xi: np.ndarray or float, points in frequency domain
         :return: np.ndarray or float, symbol evaluated at input points in frequency domain
         """
@@ -172,7 +253,8 @@ class BGIG(LevyModel):
 
     def convexity_correction(self) -> float:
         """
-        Computes the convexity correction for the Levy model, added to log process drift to ensure
+        Computes the convexity correction for the Levy model,
+        added to log process drift to ensure
         risk neutrality
         """
         a_p, b_p, p_p = self.a_p, self.b_p, self.p_p
@@ -187,9 +269,9 @@ class BGIG(LevyModel):
             / scipy.special.kv(p_m, (b_m * a_m))
         )
 
-    # =============================
-    # Calibration Interface Implementation
-    # =============================
+    #############################################
+    ### Calibration Interface Implementation  ###
+    #############################################
 
     def num_params(self) -> int:
         return 6
