@@ -116,15 +116,3 @@ class LevyModel(FourierModel, ABC):
                 frozen_factor *= np.exp(delta_T * self.symbol(xi))
 
         return frozen_factor
-
-    # def inhomogeneous_chf(self, T: float, xi: Union[float, np.ndarray], frozen_params: Dict[float, list] = None) -> complex:
-    #     """
-    #     Time-inhomogeneous characteristic function
-    #     :param T: float, time to maturity
-    #     :param xi: np.ndarray or float, points in frequency domain
-    #     :param frozen_params: optional dict, parameters for the frozen characteristic function
-    #     """
-    #
-    #     self._frozen_params = frozen_params or {}
-    #
-    #     return self.chf(T=T, xi=xi) * self.frozen_chf(xi=xi) if frozen_params else self.chf( T=T, xi=xi)
