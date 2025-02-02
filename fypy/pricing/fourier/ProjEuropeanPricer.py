@@ -28,7 +28,7 @@ class ProjEuropeanPricer(ProjPricer):
             'dx': 2 * alph / (self._N - 1),
             'a': 1. / (2 * alph / (self._N - 1)),
             'lam': cumulants.c1 - (self._N / 2 - 1) * (2 * alph / (self._N - 1)),
-            'cons3': None,  # Verrà popolato successivamente
+            'cons3': None,
             'max_nbar': self.get_nbar(a=1. / (2 * alph / (self._N - 1)), lws=max_lws, lam=cumulants.c1 - (self._N / 2 - 1) * (2 * alph / (self._N - 1)))
         }
 

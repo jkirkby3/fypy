@@ -104,10 +104,6 @@ class ProjPricer(StrikesPricer):
             return CubicImpl(N=self._N, dx=dx, model=self._model, T=T, max_n_bar=max_n_bar)
 
 
-    def update_frozen_params(self, frozen_params:Dict[float,list]):
-        if isinstance(self._model,LevyModel):
-            self._model.frozen_params= frozen_params
-
 
 # ===================================
 # Private
