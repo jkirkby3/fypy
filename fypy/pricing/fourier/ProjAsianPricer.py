@@ -332,7 +332,7 @@ class ProjArithmeticAsianPricer(ProjAsianPricer):
     def _initial_values_update(self, option_params: np.ndarray, grid_params: np.ndarray, impl: Impl,
                                x1: np.ndarray, beta: np.ndarray, payoff_coefficient_constants: np.ndarray):
 
-        # this method is used withing the method _grid_widening,
+        # this method is used within the method _grid_widening,
         # which in turn is used iff the grid is not wide enough.
 
         # if nbar and grid values changed,
